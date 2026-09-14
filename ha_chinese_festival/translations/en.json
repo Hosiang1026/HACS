@@ -1,0 +1,334 @@
+{
+  "title": "Chinese Festival",
+  "selector": {
+    "item_kind": {
+      "options": {
+        "license": "License",
+        "birthday": "Birthday",
+        "anniversary": "Anniversary",
+        "legal": "Legal holiday"
+      }
+    },
+    "anniversary_type": {
+      "options": {
+        "0": "Accumulated (solar)",
+        "1": "Countdown (solar)",
+        "2": "Countdown (lunar)"
+      }
+    },
+    "birthday_type": {
+      "options": {
+        "0": "Lunar",
+        "1": "Solar"
+      }
+    },
+    "freeway": {
+      "options": {
+        "0": "Toll",
+        "1": "Free"
+      }
+    },
+    "language": {
+      "options": {
+        "zh-Hans": "Simplified Chinese",
+        "zh-Hant": "Traditional Chinese"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "chinese_festival": {
+        "name": "Chinese Festival"
+      },
+      "license_expiry": {
+        "name": "License expiry"
+      },
+      "day_type": {
+        "name": "Day type",
+        "state": {
+          "workday": "Workday",
+          "holiday": "Holiday",
+          "weekend": "Weekend",
+          "rest": "Rest day",
+          "repair": "Makeup workday"
+        }
+      },
+      "solar_date": {
+        "name": "Solar date"
+      },
+      "weekday": {
+        "name": "Weekday"
+      },
+      "astro": {
+        "name": "Constellation"
+      },
+      "lunar_date": {
+        "name": "Lunar date"
+      },
+      "year_day": {
+        "name": "Day of year"
+      },
+      "festival_count": {
+        "name": "Festival count"
+      },
+      "license_count": {
+        "name": "License count"
+      },
+      "birthday_count": {
+        "name": "Birthday count"
+      },
+      "anniversary_count": {
+        "name": "Anniversary count"
+      },
+      "love_days": {
+        "name": "Love days"
+      },
+      "holiday_plan": {
+        "name": "Holiday plan"
+      },
+      "ai_fortune": {
+        "name": "AI Fortune",
+        "state": {
+          "disabled": "Disabled",
+          "empty": "Empty"
+        }
+      },
+      "next_solar": {
+        "name": "Next solar festival"
+      },
+      "next_lunar": {
+        "name": "Next lunar festival"
+      },
+      "next_term": {
+        "name": "Next solar term"
+      },
+      "next_special": {
+        "name": "Next special day"
+      },
+      "next_intl": {
+        "name": "Next international day"
+      },
+      "next_seasonal": {
+        "name": "Next seasonal period"
+      },
+      "next_legal": {
+        "name": "Next legal holiday"
+      },
+      "next_birthday": {
+        "name": "Next birthday"
+      },
+      "next_anniversary": {
+        "name": "Next anniversary"
+      },
+      "suit": {
+        "name": "Suitable"
+      },
+      "avoid": {
+        "name": "Avoid"
+      },
+      "eight_char": {
+        "name": "Eight characters"
+      },
+      "hour": {
+        "name": "Hour"
+      },
+      "clash": {
+        "name": "Clash"
+      },
+      "moon_phase": {
+        "name": "Moon phase"
+      },
+      "solar_term": {
+        "name": "Solar term"
+      },
+      "taboo": {
+        "name": "Taboo"
+      },
+      "good_spirit": {
+        "name": "Lucky spirits"
+      },
+      "bad_spirit": {
+        "name": "Unlucky spirits"
+      },
+      "fetus": {
+        "name": "Fetal god"
+      },
+      "tone": {
+        "name": "Tone"
+      },
+      "triad": {
+        "name": "Triad"
+      },
+      "hexad": {
+        "name": "Hexad"
+      },
+      "grade": {
+        "name": "Day grade"
+      },
+      "zodiac_sign": {
+        "name": "Zodiac"
+      },
+      "season": {
+        "name": "Season"
+      }
+    },
+    "binary_sensor": {
+      "is_holiday": {
+        "name": "Holiday"
+      },
+      "is_repair": {
+        "name": "Makeup workday"
+      }
+    },
+    "date": {
+      "chinese_festival_tap": {
+        "name": "Calendar tap"
+      }
+    }
+  },
+  "config": {
+    "step": {
+      "user": {
+        "title": "Chinese Festival",
+        "data": {
+          "name": "Name",
+          "notify_calendar": "Calendar notify",
+          "notify_calendar_time": "Calendar notify time",
+          "notify_festival": "Festival notify",
+          "notify_festival_time": "Festival notify time",
+          "notify_memorial": "Birthday/Anniversary notify",
+          "notify_memorial_time": "Birthday/Anniversary notify time",
+          "notify_license": "License expiry notify",
+          "notify_license_time": "License expiry notify time",
+          "notify": "Notify actions",
+          "near_festival_days": "Near festival days",
+          "near_birthday_days": "Near birthday days",
+          "near_anniversary_days": "Near anniversary days",
+          "near_license_days": "Near license days",
+          "holiday_auto": "Auto holiday data",
+          "language": "Language switch",
+          "ai_enabled": "Enable AI fortune",
+          "ai_api_url": "AI API URL",
+          "ai_api_key": "AI API key",
+          "ai_model": "AI model",
+          "notify_rules_enabled": "Advanced notify",
+          "notify_rules": "Notify rules (YAML)",
+          "intent_enabled": "Enable Assist intents"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Already configured"
+    },
+    "error": {
+      "invalid_yaml": "Invalid YAML",
+      "invalid_date": "Invalid date"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "menu_options": {
+          "global": "Global",
+          "add_item": "Add",
+          "edit_item": "Edit",
+          "remove_item": "Remove"
+        }
+      },
+      "global": {
+        "title": "Global",
+        "data": {
+          "notify_calendar": "Calendar notify",
+          "notify_calendar_time": "Calendar notify time",
+          "notify_festival": "Festival notify",
+          "notify_festival_time": "Festival notify time",
+          "notify_memorial": "Birthday/Anniversary notify",
+          "notify_memorial_time": "Birthday/Anniversary notify time",
+          "notify_license": "License expiry notify",
+          "notify_license_time": "License expiry notify time",
+          "notify": "Notify actions",
+          "near_festival_days": "Near festival days",
+          "near_birthday_days": "Near birthday days",
+          "near_anniversary_days": "Near anniversary days",
+          "near_license_days": "Near license days",
+          "holiday_auto": "Auto holiday data",
+          "language": "Language switch",
+          "ai_enabled": "Enable AI fortune",
+          "ai_api_url": "AI API URL",
+          "ai_api_key": "AI API key",
+          "ai_model": "AI model",
+          "notify_rules_enabled": "Advanced notify",
+          "notify_rules": "Notify rules (YAML)",
+          "intent_enabled": "Enable Assist intents"
+        }
+      },
+      "add_item": {
+        "title": "Select type",
+        "data": {
+          "item_kind": "Type"
+        }
+      },
+      "add_item_form": {
+        "title": "Add item",
+        "data": {
+          "name": "Name",
+          "date": "Date",
+          "type": "Type",
+          "freeway": "Freeway free",
+          "repair": "Makeup days",
+          "holiday": "Holiday days"
+        }
+      },
+      "edit_item": {
+        "title": "Select item",
+        "data": {
+          "item": "Item"
+        }
+      },
+      "edit_item_form": {
+        "title": "Edit item",
+        "data": {
+          "name": "Name",
+          "date": "Date",
+          "type": "Type",
+          "freeway": "Freeway free",
+          "repair": "Makeup days",
+          "holiday": "Holiday days"
+        }
+      },
+      "remove_item": {
+        "title": "Remove",
+        "data": {
+          "item": "Item"
+        }
+      }
+    },
+    "error": {
+      "invalid_date": "Invalid date",
+      "invalid_yaml": "Invalid YAML"
+    },
+    "abort": {
+      "no_items": "No items"
+    }
+  },
+  "services": {
+    "get_overview": {
+      "name": "Get overview",
+      "description": "Return today festival and almanac summary"
+    },
+    "date_control": {
+      "name": "Date control",
+      "description": "Control calendar tap date",
+      "fields": {
+        "action": {
+          "name": "Action",
+          "description": "today / previous_day / next_day / select_date"
+        },
+        "date": {
+          "name": "Date",
+          "description": "Used only with select_date"
+        }
+      }
+    }
+  }
+}

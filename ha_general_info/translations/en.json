@@ -1,0 +1,284 @@
+{
+  "title": "General Info",
+  "entity": {
+    "sensor": {
+      "created_at": { "name": "Created" },
+      "updated_at": { "name": "Updated" },
+      "lottery_ssq": {
+        "name": "SSQ"
+      },
+      "lottery_fc3d": {
+        "name": "3D"
+      },
+      "lottery_kl8": {
+        "name": "KL8"
+      },
+      "lottery_qlc": {
+        "name": "QLC"
+      },
+      "lottery_ssq_predict": {
+        "name": "SSQ predict"
+      },
+      "metal_gold": {
+        "name": "Gold",
+        "unit_of_measurement": "CNY/g"
+      },
+      "metal_silver": {
+        "name": "Silver",
+        "unit_of_measurement": "CNY/g"
+      },
+      "metal_shop": {
+        "name": "Shop gold",
+        "unit_of_measurement": "CNY/g"
+      },
+      "metal_bank": {
+        "name": "Bank gold",
+        "unit_of_measurement": "CNY/g"
+      },
+      "metal_intl_gold": {
+        "name": "Intl gold",
+        "unit_of_measurement": "USD/oz"
+      },
+      "metal_intl_silver": {
+        "name": "Intl silver",
+        "unit_of_measurement": "USD/oz"
+      },
+      "metal_sanjin_shop_cost": {
+        "name": "Wedding gold · shop",
+        "unit_of_measurement": "CNY"
+      },
+      "metal_sanjin_gold_cost": {
+        "name": "Wedding gold · spot",
+        "unit_of_measurement": "CNY"
+      },
+      "metal_gold_low": {
+        "name": "Gold low",
+        "unit_of_measurement": "CNY/g"
+      },
+      "metal_silver_low": {
+        "name": "Silver low",
+        "unit_of_measurement": "CNY/g"
+      },
+      "news_headline": {
+        "name": "News"
+      },
+      "media_movie": {
+        "name": "Movie hot"
+      },
+      "media_music": {
+        "name": "Music hot"
+      },
+      "media_tv": {
+        "name": "TV hot"
+      }
+    },
+    "button": {
+      "refresh_lottery": { "name": "Refresh welfare lottery" },
+      "refresh_metal": { "name": "Refresh metal prices" },
+      "refresh_news": { "name": "Refresh news" },
+      "refresh_stock": { "name": "Refresh stock trading" },
+      "refresh_media": { "name": "Refresh movies & music" }
+    }
+  },
+  "services": {
+    "refresh": {
+      "name": "Refresh",
+      "description": "Refresh data",
+      "fields": {
+        "module": {
+          "name": "Module",
+          "description": "Module to refresh"
+        }
+      }
+    },
+    "clear_gold_low": {
+      "name": "Clear gold low",
+      "description": "Reset gold historical low"
+    }
+  },
+  "selector": {
+    "menu_next": {
+      "options": {
+        "global": "Global notify",
+        "lottery": "Welfare lottery",
+        "metal": "Metal prices",
+        "news": "News",
+        "stock": "Stock trading",
+        "media": "Movies & music"
+      }
+    },
+    "lottery_types": {
+      "options": {
+        "ssq": "SSQ",
+        "3d": "3D",
+        "kl8": "KL8",
+        "qlc": "QLC"
+      }
+    },
+    "metal_items": {
+      "options": {
+        "gold": "Gold",
+        "silver": "Silver",
+        "shop": "Shop gold",
+        "bank": "Bank gold"
+      }
+    },
+    "refresh_module": {
+      "options": {
+        "all": "All",
+        "lottery": "Welfare lottery",
+        "metal": "Metal prices",
+        "news": "News",
+        "stock": "Stock trading",
+        "media": "Movies & music"
+      }
+    },
+    "stock_provider": {
+      "options": {
+        "sina": "Sina",
+        "tencent": "Tencent"
+      }
+    },
+    "media_items": {
+      "options": {
+        "movie": "Movie",
+        "music": "Music",
+        "tv": "TV"
+      }
+    }
+  },
+  "config": {
+    "step": {
+      "user": {
+        "title": "General Info",
+        "description": "Enable modules and configure global notify",
+        "data": {
+          "name": "Name",
+          "notify": "Notify action",
+          "announce": "Announce entity",
+          "notify_enabled": "Enable notify",
+          "enable_lottery": "Welfare lottery",
+          "enable_metal": "Metal prices",
+          "enable_news": "News",
+          "enable_stock": "Stock trading",
+          "enable_media": "Movies & music"
+        },
+        "data_description": {
+          "announce": "Entity used for announcements"
+        }
+      },
+      "stock_setup": {
+        "title": "Stock trading",
+        "description": "One code per line, e.g. sh600519",
+        "data": {
+          "provider": "Provider",
+          "symbols_text": "Symbols"
+        }
+      },
+      "media_setup": {
+        "title": "Movies & music",
+        "data": {
+          "items": "Items"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "menu": {
+        "title": "Options",
+        "description": "Choose a module to configure; submit saves immediately",
+        "data": {
+          "next": "Module"
+        }
+      },
+      "global": {
+        "title": "Global notify",
+        "data": {
+          "notify": "Notify action",
+          "announce": "Announce entity",
+          "notify_enabled": "Enable notify"
+        },
+        "data_description": {
+          "notify_enabled": "When off, no module notifications are sent"
+        }
+      },
+      "lottery": {
+        "title": "Welfare lottery",
+        "description": "Polls every few minutes on draw days 21:10–22:30; otherwise sleeps until next draw",
+        "data": {
+          "enabled": "Enabled",
+          "types": "Types",
+          "interval": "Draw-window interval (min)",
+          "predict_enabled": "SSQ prediction",
+          "notify_enabled": "Notify",
+          "notify_start": "Notify start",
+          "notify_end": "Notify end"
+        }
+      },
+      "metal": {
+        "title": "Metal prices",
+        "description": "Defaults to once per day; leave items empty to enable all",
+        "data": {
+          "enabled": "Enabled",
+          "items": "Items (optional)",
+          "interval": "Interval",
+          "track_low": "Track low",
+          "sanjin_necklace": "Necklace (g)",
+          "sanjin_bracelet": "Bracelet (g)",
+          "sanjin_ring": "Ring (g)",
+          "notify_enabled": "Notify",
+          "notify_start": "Notify start",
+          "notify_end": "Notify end"
+        }
+      },
+      "news": {
+        "title": "News",
+        "description": "One RSS URL per line. Default: 7:30 and 18:30",
+        "data": {
+          "enabled": "Enabled",
+          "feeds_text": "RSS feeds",
+          "limit": "Limit",
+          "interval": "Fixed interval (min, 0=morning & evening)",
+          "notify_enabled": "Notify",
+          "notify_start": "Notify start",
+          "notify_end": "Notify end"
+        }
+      },
+      "stock": {
+        "title": "Stock trading",
+        "description": "One code per line, e.g. sh600519. Faster at open/close, sleeps over lunch",
+        "data": {
+          "enabled": "Enabled",
+          "provider": "Provider",
+          "symbols_text": "Symbols",
+          "interval": "Mid-session interval (min)",
+          "trading_only": "Trading hours only",
+          "notify_change_pct": "Change pct threshold",
+          "notify_enabled": "Notify",
+          "notify_start": "Notify start",
+          "notify_end": "Notify end"
+        },
+        "data_description": {
+          "interval": "Used 10:00–11:30 and 13:00–14:30; open/close peaks use 1 min"
+        }
+      },
+      "media": {
+        "title": "Movies & music",
+        "data": {
+          "enabled": "Enabled",
+          "items": "Items",
+          "limit": "Limit",
+          "interval": "Interval",
+          "notify_on_change": "Notify on top change",
+          "notify_enabled": "Notify",
+          "notify_start": "Notify start",
+          "notify_end": "Notify end"
+        }
+      }
+    }
+  }
+}

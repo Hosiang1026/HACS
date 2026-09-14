@@ -1,0 +1,12 @@
+{
+  "domain": "ha_fuel_price",
+  "name": "燃油价格",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/hosiang/ha_fuel_price",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/hosiang/ha_fuel_price/issues",
+  "requirements": ["beautifulsoup4"],
+  "version": "1.0.0"
+}

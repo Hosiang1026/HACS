@@ -1,0 +1,12 @@
+{
+  "domain": "ha_energy_stats",
+  "name": "用电统计",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/hosiang/ha_energy_stats",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/hosiang/ha_energy_stats/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}

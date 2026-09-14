@@ -1,0 +1,201 @@
+{
+  "title": "小米云服务",
+  "config": {
+    "step": {
+      "user": {
+        "title": "小米云凭据",
+        "description": "请输入小米账号和密码",
+        "data": {
+          "username": "账号",
+          "password": "密码"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "账户已配置"
+    },
+    "error": {
+      "invalid_auth": "账号或密码错误",
+      "no_device": "账号下未找到设备"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "小米云选项",
+        "menu_options": {
+          "locate": "定位设置",
+          "amap": "高德设置"
+        }
+      },
+      "locate": {
+        "title": "定位设置",
+        "data": {
+          "max_interval": "平时刷新间隔（分钟）",
+          "enable_low_battery_polling": "启用低电量快速更新",
+          "low_battery_threshold": "低电量阈值 (%)",
+          "low_battery_interval": "低电量更新间隔 (分钟)",
+          "period_weekdays": "高峰/低谷仅工作日（周一至周五）",
+          "peak_enabled": "启用高峰时段",
+          "peak_start_1": "高峰1 开始",
+          "peak_end_1": "高峰1 结束",
+          "peak_start_2": "高峰2 开始",
+          "peak_end_2": "高峰2 结束",
+          "peak_start_3": "高峰3 开始",
+          "peak_end_3": "高峰3 结束",
+          "peak_interval": "高峰刷新间隔（分钟）",
+          "offpeak_enabled": "启用低谷时段",
+          "offpeak_start_1": "低谷1 开始",
+          "offpeak_end_1": "低谷1 结束",
+          "offpeak_start_2": "低谷2 开始",
+          "offpeak_end_2": "低谷2 结束",
+          "offpeak_interval": "低谷刷新间隔（分钟）"
+        }
+      },
+      "amap": {
+        "title": "高德设置",
+        "data": {
+          "commute_enabled": "是否启用",
+          "commute_zones": "家区域",
+          "activity_entity": "活动状态",
+          "amap_key": "高德 Key"
+        },
+        "data_description": {
+          "activity_entity": "可多选，每人对应一个；值：在家、公司、外出、外地"
+        }
+      }
+    },
+    "error": {
+      "invalid_windows": "请选择开始和结束时间",
+      "commute_key": "请填写高德 Key",
+      "commute_zones": "请选择至少一个家区域"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "battery": { "name": "手机电量" },
+      "phone_status": {
+        "name": "手机状态",
+        "state": { "online": "在线", "offline": "离线", "unknown": "未知" }
+      },
+      "update_time": { "name": "更新时间" },
+      "created_at": { "name": "创建时间" },
+      "address": { "name": "位置地址" },
+      "commute_distance": { "name": "通勤距离" },
+      "commute_time": { "name": "通勤时间" },
+      "commute_info": { "name": "通勤信息" },
+      "locate_count": { "name": "每日定位调用次数" },
+      "amap_count": { "name": "每日高德调用次数" }
+    },
+    "button": {
+      "update": { "name": "更新" },
+      "play_sound": { "name": "播放声音" },
+      "find_device": { "name": "查找设备" },
+      "lost_device": { "name": "丢失模式" }
+    },
+    "text": {
+      "lost_number": { "name": "联系电话" },
+      "lost_message": { "name": "丢失留言" },
+      "clipboard": { "name": "云剪贴板" }
+    }
+  },
+  "services": {
+    "update": {
+      "name": "更新",
+      "description": "立即更新小米云设备位置。",
+      "fields": {
+        "account": {
+          "name": "账号",
+          "description": "小米账号用户名。"
+        }
+      }
+    },
+    "play_sound": {
+      "name": "播放声音",
+      "description": "设备播放提示音。",
+      "fields": {
+        "account": {
+          "name": "账号",
+          "description": "小米账号用户名。"
+        },
+        "imei": {
+          "name": "IMEI",
+          "description": "设备 IMEI。"
+        },
+        "device_name": {
+          "name": "设备名称",
+          "description": "设备名称或 slug。"
+        }
+      }
+    },
+    "find_device": {
+      "name": "查找设备",
+      "description": "查找设备并更新定位。",
+      "fields": {
+        "account": {
+          "name": "账号",
+          "description": "小米账号用户名。"
+        },
+        "imei": {
+          "name": "IMEI",
+          "description": "设备 IMEI。"
+        },
+        "device_name": {
+          "name": "设备名称",
+          "description": "设备名称或 slug。"
+        }
+      }
+    },
+    "lost_device": {
+      "name": "丢失模式",
+      "description": "开启丢失模式。",
+      "fields": {
+        "account": {
+          "name": "账号",
+          "description": "小米账号用户名。"
+        },
+        "imei": {
+          "name": "IMEI",
+          "description": "设备 IMEI。"
+        },
+        "device_name": {
+          "name": "设备名称",
+          "description": "设备名称或 slug。"
+        },
+        "phone": {
+          "name": "电话",
+          "description": "联系电话。"
+        },
+        "message": {
+          "name": "留言",
+          "description": "锁定屏幕留言。"
+        },
+        "onlinenotify": {
+          "name": "在线通知",
+          "description": "定位到设备时短信通知。"
+        }
+      }
+    },
+    "clipboard": {
+      "name": "云剪贴板",
+      "description": "发送云剪贴板。",
+      "fields": {
+        "account": {
+          "name": "账号",
+          "description": "小米账号用户名。"
+        },
+        "text": {
+          "name": "文本",
+          "description": "剪贴板文本。"
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "no_account_configured": { "message": "未配置小米云账号" },
+    "account_not_found": { "message": "未找到账号 {account}" },
+    "device_required": { "message": "请指定设备 imei 或 device_name" },
+    "lost_number_required": { "message": "请填写联系电话" },
+    "lost_message_required": { "message": "请填写丢失留言" }
+  }
+}

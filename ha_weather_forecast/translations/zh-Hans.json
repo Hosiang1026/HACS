@@ -1,0 +1,187 @@
+{
+  "title": "天气预报",
+  "entity": {
+    "sensor": {
+      "created_at": { "name": "创建时间" },
+      "updated_at": { "name": "更新时间" },
+      "weather_temp": { "name": "气温" },
+      "weather_feels": { "name": "体感温度" },
+      "weather_humidity": { "name": "湿度" },
+      "weather_aqi": { "name": "空气质量" },
+      "weather_wind": { "name": "风力" },
+      "weather_indices": { "name": "生活指数" },
+      "weather_forecast": { "name": "天气预报" }
+    },
+    "binary_sensor": {
+      "weather_alarm": { "name": "天气预警" }
+    },
+    "button": {
+      "refresh_weather": { "name": "更新天气预报" }
+    }
+  },
+  "services": {
+    "refresh": {
+      "name": "刷新",
+      "description": "刷新天气预报"
+    }
+  },
+  "selector": {
+    "menu_next": {
+      "options": {
+        "global": "全局通知",
+        "cities": "城市管理",
+        "module": "模块通知"
+      }
+    },
+    "cities_action": {
+      "options": {
+        "add": "添加城市",
+        "edit": "编辑城市",
+        "delete": "删除城市",
+        "back": "返回"
+      }
+    },
+    "weather_provider": {
+      "options": {
+        "tianqi": "中国天气网",
+        "qweather": "和风天气",
+        "caiyun": "彩云天气"
+      }
+    }
+  },
+  "config": {
+    "step": {
+      "user": {
+        "title": "天气预报",
+        "description": "配置全局通知",
+        "data": {
+          "name": "名称",
+          "notify": "通知动作",
+          "announce": "播报实体",
+          "notify_enabled": "启用通知"
+        },
+        "data_description": {
+          "announce": "用于语音播报的实体"
+        }
+      },
+      "city": {
+        "title": "添加城市",
+        "description": "输入城市名搜索，如杭州、上海。早出晚归高峰自动加频",
+        "data": {
+          "city": "城市",
+          "provider": "数据源",
+          "interval": "高峰刷新间隔（分钟）",
+          "api_key": "API Key",
+          "api_host": "API Host",
+          "add_another": "继续添加城市"
+        },
+        "data_description": {
+          "city": "支持城市名或区县名搜索",
+          "interval": "07:00–09:00、18:00–20:00 使用此间隔；其余时段约 60 分钟",
+          "api_key": "部分数据源需要",
+          "api_host": "自定义 API 地址（可选）"
+        }
+      },
+      "pick": {
+        "title": "选择城市",
+        "description": "找到多个匹配结果，请选择",
+        "data": {
+          "area_id": "城市"
+        }
+      }
+    },
+    "error": {
+      "city_not_found": "未找到城市，请换个关键词",
+      "api_key_required": "该数据源需要填写 API Key"
+    },
+    "abort": {
+      "already_configured": "天气预报已配置"
+    }
+  },
+  "options": {
+    "step": {
+      "menu": {
+        "title": "选项",
+        "description": "选择要配置的项目，提交后立即保存",
+        "data": {
+          "next": "项目"
+        }
+      },
+      "global": {
+        "title": "全局通知",
+        "data": {
+          "notify": "通知动作",
+          "announce": "播报实体",
+          "notify_enabled": "启用通知"
+        },
+        "data_description": {
+          "notify_enabled": "关闭后所有通知均不发送"
+        }
+      },
+      "cities": {
+        "title": "城市管理",
+        "description": "当前城市：{cities}",
+        "data": {
+          "action": "操作"
+        }
+      },
+      "select_city": {
+        "title": "选择城市",
+        "data": {
+          "city_index": "城市"
+        }
+      },
+      "delete_city": {
+        "title": "删除城市",
+        "description": "确认删除「{city}」？",
+        "data": {
+          "confirm": "确认删除"
+        }
+      },
+      "city_form": {
+        "title": "城市配置",
+        "description": "输入城市名称搜索。早出晚归自动加频",
+        "data": {
+          "city": "城市名称",
+          "provider": "数据源",
+          "interval": "高峰刷新间隔（分钟）",
+          "forecast_days": "预报天数",
+          "indices_enabled": "生活指数",
+          "api_key": "API Key",
+          "api_host": "API Host"
+        },
+        "data_description": {
+          "city": "如 杭州、余杭",
+          "interval": "07:00–09:00、18:00–20:00 使用此间隔；其余时段约 60 分钟",
+          "api_key": "部分数据源需要"
+        }
+      },
+      "module": {
+        "title": "模块通知",
+        "data": {
+          "enabled": "启用",
+          "notify_enabled": "模块通知",
+          "notify_start": "通知开始",
+          "notify_end": "通知结束",
+          "notify_alarm": "预警通知",
+          "notify_rain": "降雨通知"
+        },
+        "data_description": {
+          "notify_alarm": "有预警时推送通知",
+          "notify_rain": "预报/实况有雨时推送，含时间与雨量"
+        }
+      },
+      "pick_options": {
+        "title": "选择城市",
+        "description": "找到多个匹配结果，请选择",
+        "data": {
+          "area_id": "城市"
+        }
+      }
+    },
+    "error": {
+      "city_not_found": "未找到城市，请换个关键词",
+      "api_key_required": "该数据源需要填写 API Key"
+    }
+  }
+}

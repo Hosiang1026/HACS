@@ -1,0 +1,13 @@
+{
+  "domain": "ha_car_stats",
+  "name": "汽车统计",
+  "version": "1.1.1",
+  "documentation": "https://github.com/local/ha_car_stats",
+  "requirements": ["requests"],
+  "dependencies": [],
+  "codeowners": [],
+  "config_flow": true,
+  "iot_class": "cloud_polling",
+  "integration_type": "device",
+  "import_executor": true
+}

@@ -1,0 +1,201 @@
+{
+  "title": "小米云服务",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Xiaomi Cloud credentials",
+        "description": "Enter your Xiaomi account credentials",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Account already configured"
+    },
+    "error": {
+      "invalid_auth": "Invalid username or password",
+      "no_device": "No devices found in account"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Xiaomi Cloud options",
+        "menu_options": {
+          "locate": "Locate settings",
+          "amap": "Amap settings"
+        }
+      },
+      "locate": {
+        "title": "Locate settings",
+        "data": {
+          "max_interval": "Normal update interval (minutes)",
+          "enable_low_battery_polling": "Enable low battery fast polling",
+          "low_battery_threshold": "Low battery threshold (%)",
+          "low_battery_interval": "Low battery update interval (minutes)",
+          "period_weekdays": "Peak/off-peak on weekdays only (Mon–Fri)",
+          "peak_enabled": "Enable peak updates",
+          "peak_start_1": "Peak 1 start",
+          "peak_end_1": "Peak 1 end",
+          "peak_start_2": "Peak 2 start",
+          "peak_end_2": "Peak 2 end",
+          "peak_start_3": "Peak 3 start",
+          "peak_end_3": "Peak 3 end",
+          "peak_interval": "Peak update interval (minutes)",
+          "offpeak_enabled": "Enable off-peak updates",
+          "offpeak_start_1": "Off-peak 1 start",
+          "offpeak_end_1": "Off-peak 1 end",
+          "offpeak_start_2": "Off-peak 2 start",
+          "offpeak_end_2": "Off-peak 2 end",
+          "offpeak_interval": "Off-peak update interval (minutes)"
+        }
+      },
+      "amap": {
+        "title": "Amap settings",
+        "data": {
+          "commute_enabled": "Enabled",
+          "commute_zones": "Home zones",
+          "activity_entity": "Activity status",
+          "amap_key": "Amap key"
+        },
+        "data_description": {
+          "activity_entity": "Multiple; one per person. Values: home, work, out, travel"
+        }
+      }
+    },
+    "error": {
+      "invalid_windows": "Select start and end time",
+      "commute_key": "Enter Amap key",
+      "commute_zones": "Select at least one home zone"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "battery": { "name": "Phone battery" },
+      "phone_status": {
+        "name": "Phone status",
+        "state": { "online": "Online", "offline": "Offline", "unknown": "Unknown" }
+      },
+      "update_time": { "name": "Last update" },
+      "created_at": { "name": "Created at" },
+      "address": { "name": "Address" },
+      "commute_distance": { "name": "Commute distance" },
+      "commute_time": { "name": "Commute time" },
+      "commute_info": { "name": "Commute info" },
+      "locate_count": { "name": "Daily locate calls" },
+      "amap_count": { "name": "Daily Amap calls" }
+    },
+    "button": {
+      "update": { "name": "Update" },
+      "play_sound": { "name": "Play sound" },
+      "find_device": { "name": "Find device" },
+      "lost_device": { "name": "Lost mode" }
+    },
+    "text": {
+      "lost_number": { "name": "Contact number" },
+      "lost_message": { "name": "Lost message" },
+      "clipboard": { "name": "Cloud clipboard" }
+    }
+  },
+  "services": {
+    "update": {
+      "name": "Update",
+      "description": "Update Xiaomi Cloud device locations.",
+      "fields": {
+        "account": {
+          "name": "Account",
+          "description": "Xiaomi account username."
+        }
+      }
+    },
+    "play_sound": {
+      "name": "Play sound",
+      "description": "Play a sound on the device.",
+      "fields": {
+        "account": {
+          "name": "Account",
+          "description": "Xiaomi account username."
+        },
+        "imei": {
+          "name": "IMEI",
+          "description": "Device IMEI."
+        },
+        "device_name": {
+          "name": "Device name",
+          "description": "Device name or slug."
+        }
+      }
+    },
+    "find_device": {
+      "name": "Find device",
+      "description": "Find the device and update its location.",
+      "fields": {
+        "account": {
+          "name": "Account",
+          "description": "Xiaomi account username."
+        },
+        "imei": {
+          "name": "IMEI",
+          "description": "Device IMEI."
+        },
+        "device_name": {
+          "name": "Device name",
+          "description": "Device name or slug."
+        }
+      }
+    },
+    "lost_device": {
+      "name": "Lost mode",
+      "description": "Enable lost mode on the device.",
+      "fields": {
+        "account": {
+          "name": "Account",
+          "description": "Xiaomi account username."
+        },
+        "imei": {
+          "name": "IMEI",
+          "description": "Device IMEI."
+        },
+        "device_name": {
+          "name": "Device name",
+          "description": "Device name or slug."
+        },
+        "phone": {
+          "name": "Phone",
+          "description": "Contact phone number."
+        },
+        "message": {
+          "name": "Message",
+          "description": "Lock screen message."
+        },
+        "onlinenotify": {
+          "name": "Online notify",
+          "description": "Send SMS when the device is located."
+        }
+      }
+    },
+    "clipboard": {
+      "name": "Clipboard",
+      "description": "Send text to the cloud clipboard.",
+      "fields": {
+        "account": {
+          "name": "Account",
+          "description": "Xiaomi account username."
+        },
+        "text": {
+          "name": "Text",
+          "description": "Clipboard text."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "no_account_configured": { "message": "No Xiaomi Cloud account configured" },
+    "account_not_found": { "message": "Account {account} not found" },
+    "device_required": { "message": "Specify device imei or device_name" },
+    "lost_number_required": { "message": "Please enter the contact number" },
+    "lost_message_required": { "message": "Please enter the lost message" }
+  }
+}

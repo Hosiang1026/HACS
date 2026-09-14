@@ -1,0 +1,368 @@
+{
+  "title": "燃油价格",
+  "entity": {
+    "button": {
+      "manual_update": {
+        "name": "手动更新"
+      }
+    },
+    "sensor": {
+      "created_at": {
+        "name": "创建时间"
+      },
+      "update_time": {
+        "name": "更新时间"
+      },
+      "trend": {
+        "name": "油价趋势",
+        "state_attributes": {
+          "full_text": {
+            "name": "完整文案"
+          }
+        }
+      },
+      "fuel_92": {
+        "name": "92号汽油",
+        "state_attributes": {
+          "province": {
+            "name": "省份"
+          },
+          "fuel_type": {
+            "name": "油品"
+          },
+          "update_time": {
+            "name": "更新时间"
+          }
+        }
+      },
+      "fuel_95": {
+        "name": "95号汽油",
+        "state_attributes": {
+          "province": {
+            "name": "省份"
+          },
+          "fuel_type": {
+            "name": "油品"
+          },
+          "update_time": {
+            "name": "更新时间"
+          }
+        }
+      },
+      "fuel_98": {
+        "name": "98号汽油",
+        "state_attributes": {
+          "province": {
+            "name": "省份"
+          },
+          "fuel_type": {
+            "name": "油品"
+          },
+          "update_time": {
+            "name": "更新时间"
+          }
+        }
+      },
+      "fuel_0": {
+        "name": "0号柴油",
+        "state_attributes": {
+          "province": {
+            "name": "省份"
+          },
+          "fuel_type": {
+            "name": "油品"
+          },
+          "update_time": {
+            "name": "更新时间"
+          }
+        }
+      },
+      "fuel_low_date": {
+        "name": "最低油价日期",
+        "state_attributes": {
+          "province": {
+            "name": "省份"
+          },
+          "low_92": {
+            "name": "92号最低"
+          },
+          "low_95": {
+            "name": "95号最低"
+          },
+          "low_98": {
+            "name": "98号最低"
+          },
+          "low_0": {
+            "name": "0号最低"
+          }
+        }
+      },
+      "fuel_92_low": {
+        "name": "92号最低油价",
+        "state_attributes": {
+          "province": {
+            "name": "省份"
+          },
+          "fuel_type": {
+            "name": "油品"
+          },
+          "low_date": {
+            "name": "最低油价日期"
+          }
+        }
+      },
+      "fuel_95_low": {
+        "name": "95号最低油价",
+        "state_attributes": {
+          "province": {
+            "name": "省份"
+          },
+          "fuel_type": {
+            "name": "油品"
+          },
+          "low_date": {
+            "name": "最低油价日期"
+          }
+        }
+      },
+      "fuel_98_low": {
+        "name": "98号最低油价",
+        "state_attributes": {
+          "province": {
+            "name": "省份"
+          },
+          "fuel_type": {
+            "name": "油品"
+          },
+          "low_date": {
+            "name": "最低油价日期"
+          }
+        }
+      },
+      "fuel_0_low": {
+        "name": "0号最低油价",
+        "state_attributes": {
+          "province": {
+            "name": "省份"
+          },
+          "fuel_type": {
+            "name": "油品"
+          },
+          "low_date": {
+            "name": "最低油价日期"
+          }
+        }
+      },
+      "fuel_92_cost": {
+        "name": "92号加油费用",
+        "state_attributes": {
+          "province": {
+            "name": "省份"
+          },
+          "fuel_type": {
+            "name": "油品"
+          },
+          "fill_liters": {
+            "name": "加油升数"
+          },
+          "unit_price": {
+            "name": "单价"
+          }
+        }
+      },
+      "fuel_95_cost": {
+        "name": "95号加油费用",
+        "state_attributes": {
+          "province": {
+            "name": "省份"
+          },
+          "fuel_type": {
+            "name": "油品"
+          },
+          "fill_liters": {
+            "name": "加油升数"
+          },
+          "unit_price": {
+            "name": "单价"
+          }
+        }
+      },
+      "fuel_98_cost": {
+        "name": "98号加油费用",
+        "state_attributes": {
+          "province": {
+            "name": "省份"
+          },
+          "fuel_type": {
+            "name": "油品"
+          },
+          "fill_liters": {
+            "name": "加油升数"
+          },
+          "unit_price": {
+            "name": "单价"
+          }
+        }
+      },
+      "fuel_0_cost": {
+        "name": "0号加油费用",
+        "state_attributes": {
+          "province": {
+            "name": "省份"
+          },
+          "fuel_type": {
+            "name": "油品"
+          },
+          "fill_liters": {
+            "name": "加油升数"
+          },
+          "unit_price": {
+            "name": "单价"
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "default_name": {
+      "message": "燃油价格"
+    },
+    "fuel_92": {
+      "message": "92号汽油"
+    },
+    "fuel_95": {
+      "message": "95号汽油"
+    },
+    "fuel_98": {
+      "message": "98号汽油"
+    },
+    "fuel_0": {
+      "message": "0号柴油"
+    },
+    "notify_daily_title": {
+      "message": "⛽今日油价"
+    },
+    "notify_province": {
+      "message": "\n🚘{name}\n"
+    },
+    "notify_price_line": {
+      "message": "· {fuel}: {value}"
+    },
+    "notify_low_header": {
+      "message": "\n🎯最低油价"
+    },
+    "notify_low_95": {
+      "message": "· {name}95号汽油: {value}"
+    },
+    "notify_update_time": {
+      "message": "· 更新时间: {date}"
+    },
+    "notify_convert_header": {
+      "message": "\n🚖{name}95号汽油换算\n"
+    },
+    "notify_tank": {
+      "message": "· 油箱容积: {liters}升"
+    },
+    "notify_cost_line": {
+      "message": "· {liters}L油费: {cost:.2f}元|差价: {diff:.2f}元"
+    },
+    "notify_low_line": {
+      "message": "· {fuel}最低: {value}"
+    },
+    "notify_low_date": {
+      "message": "· 最低油价日期: {date}"
+    },
+    "notify_near_low_title": {
+      "message": "🎯最低油价"
+    },
+    "notify_near_low_message": {
+      "message": "🚘{name}\n· 差价: {diff:.2f}\n· 95号当前油价: {current:.2f}\n· 95号最低油价: {low:.2f}"
+    },
+    "update_failed": {
+      "message": "全部省份油价抓取失败"
+    }
+  },
+  "config": {
+    "step": {
+      "user": {
+        "title": "燃油价格",
+        "description": "配置集成名称",
+        "data": {
+          "name": "名称"
+        }
+      },
+      "province": {
+        "title": "添加省份",
+        "description": "选择要跟踪油价的直辖市/省份",
+        "data": {
+          "province_code": "省份",
+          "notify_low": "发送最低油价通知",
+          "notify": "发送通知动作"
+        }
+      }
+    },
+    "error": {
+      "already_province": "该省份已添加"
+    },
+    "abort": {
+      "already_configured": "燃油价格已配置"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "燃油价格选项",
+        "menu_options": {
+          "global": "全局设置",
+          "add_province": "添加省份",
+          "edit_province": "编辑省份",
+          "remove_province": "删除省份"
+        }
+      },
+      "global": {
+        "title": "全局设置",
+        "data": {
+          "fill_liters": "加油升数",
+          "notify_enable": "开启发送通知",
+          "notify_daily": "每天发送",
+          "notify_weekend": "周末发送",
+          "notify": "发送通知动作"
+        }
+      },
+      "add_province": {
+        "title": "添加省份",
+        "data": {
+          "province_code": "省份",
+          "notify_low": "发送最低油价通知",
+          "notify": "发送通知动作"
+        }
+      },
+      "edit_province": {
+        "title": "编辑省份",
+        "data": {
+          "province": "选择省份"
+        }
+      },
+      "edit_form": {
+        "title": "编辑省份",
+        "data": {
+          "province_code": "省份",
+          "notify_low": "发送最低油价通知",
+          "notify": "发送通知动作"
+        }
+      },
+      "remove_province": {
+        "title": "删除省份",
+        "data": {
+          "province": "选择省份"
+        }
+      }
+    },
+    "error": {
+      "already_province": "该省份已添加"
+    },
+    "abort": {
+      "no_provinces": "尚未添加省份"
+    }
+  }
+}

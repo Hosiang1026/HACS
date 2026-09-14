@@ -1,0 +1,273 @@
+{
+  "title": "综合资讯",
+  "entity": {
+    "sensor": {
+      "created_at": { "name": "创建时间" },
+      "updated_at": { "name": "更新时间" },
+      "lottery_ssq": { "name": "双色球" },
+      "lottery_fc3d": { "name": "福彩3D" },
+      "lottery_kl8": { "name": "快乐8" },
+      "lottery_qlc": { "name": "七乐彩" },
+      "lottery_ssq_predict": { "name": "双色球预测" },
+      "metal_gold": {
+        "name": "黄金价格",
+        "unit_of_measurement": "元/克"
+      },
+      "metal_silver": {
+        "name": "白银价格",
+        "unit_of_measurement": "元/克"
+      },
+      "metal_shop": {
+        "name": "金店金价",
+        "unit_of_measurement": "元/克"
+      },
+      "metal_bank": {
+        "name": "银行金价",
+        "unit_of_measurement": "元/克"
+      },
+      "metal_intl_gold": {
+        "name": "国际金价",
+        "unit_of_measurement": "USD/oz"
+      },
+      "metal_intl_silver": {
+        "name": "国际银价",
+        "unit_of_measurement": "USD/oz"
+      },
+      "metal_sanjin_shop_cost": {
+        "name": "三金估算·金店",
+        "unit_of_measurement": "元"
+      },
+      "metal_sanjin_gold_cost": {
+        "name": "三金估算·黄金",
+        "unit_of_measurement": "元"
+      },
+      "metal_gold_low": {
+        "name": "黄金历史低价",
+        "unit_of_measurement": "元/克"
+      },
+      "metal_silver_low": {
+        "name": "白银历史低价",
+        "unit_of_measurement": "元/克"
+      },
+      "news_headline": { "name": "新闻头条" },
+      "media_movie": {
+        "name": "电影热榜"
+      },
+      "media_music": {
+        "name": "音乐热榜"
+      },
+      "media_tv": {
+        "name": "剧集热榜"
+      }
+    },
+    "button": {
+      "refresh_lottery": { "name": "更新福利彩票" },
+      "refresh_metal": { "name": "更新金银价格" },
+      "refresh_news": { "name": "更新新闻资讯" },
+      "refresh_stock": { "name": "更新股票交易" },
+      "refresh_media": { "name": "更新影视音乐" }
+    }
+  },
+  "services": {
+    "refresh": {
+      "name": "刷新",
+      "description": "刷新资讯数据",
+      "fields": {
+        "module": {
+          "name": "模块",
+          "description": "要刷新的模块"
+        }
+      }
+    },
+    "clear_gold_low": {
+      "name": "清除黄金历史低价",
+      "description": "重置黄金历史低价记录"
+    }
+  },
+  "selector": {
+    "menu_next": {
+      "options": {
+        "global": "全局通知",
+        "lottery": "福利彩票",
+        "metal": "金银价格",
+        "news": "新闻资讯",
+        "stock": "股票交易",
+        "media": "影视音乐"
+      }
+    },
+    "lottery_types": {
+      "options": {
+        "ssq": "双色球",
+        "3d": "福彩3D",
+        "kl8": "快乐8",
+        "qlc": "七乐彩"
+      }
+    },
+    "metal_items": {
+      "options": {
+        "gold": "黄金",
+        "silver": "白银",
+        "shop": "金店金价",
+        "bank": "银行金价"
+      }
+    },
+    "refresh_module": {
+      "options": {
+        "all": "全部",
+        "lottery": "福利彩票",
+        "metal": "金银价格",
+        "news": "新闻资讯",
+        "stock": "股票交易",
+        "media": "影视音乐"
+      }
+    },
+    "stock_provider": {
+      "options": {
+        "sina": "新浪",
+        "tencent": "腾讯"
+      }
+    },
+    "media_items": {
+      "options": {
+        "movie": "电影",
+        "music": "音乐",
+        "tv": "剧集"
+      }
+    }
+  },
+  "config": {
+    "step": {
+      "user": {
+        "title": "综合资讯",
+        "description": "选择要启用的模块，并配置全局通知",
+        "data": {
+          "name": "名称",
+          "notify": "通知动作",
+          "announce": "播报实体",
+          "notify_enabled": "启用通知",
+          "enable_lottery": "福利彩票",
+          "enable_metal": "金银价格",
+          "enable_news": "新闻资讯",
+          "enable_stock": "股票交易",
+          "enable_media": "影视音乐"
+        },
+        "data_description": {
+          "announce": "用于语音播报的实体"
+        }
+      },
+      "stock_setup": {
+        "title": "股票交易",
+        "description": "每行一个代码，如 sh600519",
+        "data": {
+          "provider": "数据源",
+          "symbols_text": "股票代码"
+        }
+      },
+      "media_setup": {
+        "title": "影视音乐",
+        "data": {
+          "items": "内容"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "综合资讯已配置"
+    }
+  },
+  "options": {
+    "step": {
+      "menu": {
+        "title": "选项",
+        "description": "选择要配置的模块，提交后立即保存",
+        "data": {
+          "next": "模块"
+        }
+      },
+      "global": {
+        "title": "全局通知",
+        "data": {
+          "notify": "通知动作",
+          "announce": "播报实体",
+          "notify_enabled": "启用通知"
+        },
+        "data_description": {
+          "notify_enabled": "关闭后所有模块通知均不发送"
+        }
+      },
+      "lottery": {
+        "title": "福利彩票",
+        "description": "按开奖日 21:10–22:30 自动加频；其余时间睡到下次开奖",
+        "data": {
+          "enabled": "启用",
+          "types": "彩种",
+          "interval": "开奖时段刷新间隔（分钟）",
+          "predict_enabled": "双色球预测",
+          "notify_enabled": "模块通知",
+          "notify_start": "通知开始",
+          "notify_end": "通知结束"
+        }
+      },
+      "metal": {
+        "title": "金银价格",
+        "description": "默认每天更新一次即可；品种留空则全部启用",
+        "data": {
+          "enabled": "启用",
+          "items": "品种（可选）",
+          "interval": "刷新间隔（分钟）",
+          "track_low": "记录历史低价",
+          "sanjin_necklace": "三金·项链（克）",
+          "sanjin_bracelet": "三金·手镯（克）",
+          "sanjin_ring": "三金·戒指（克）",
+          "notify_enabled": "模块通知",
+          "notify_start": "通知开始",
+          "notify_end": "通知结束"
+        }
+      },
+      "news": {
+        "title": "新闻资讯",
+        "description": "每行一个 RSS 地址。默认 7:30 / 18:30 各更新一次",
+        "data": {
+          "enabled": "启用",
+          "feeds_text": "RSS 列表",
+          "limit": "条数",
+          "interval": "固定刷新间隔（分钟，0=早晚各一次）",
+          "notify_enabled": "模块通知",
+          "notify_start": "通知开始",
+          "notify_end": "通知结束"
+        }
+      },
+      "stock": {
+        "title": "股票交易",
+        "description": "每行一个代码，如 sh600519。开盘/尾盘自动加频，午休休眠",
+        "data": {
+          "enabled": "启用",
+          "provider": "数据源",
+          "symbols_text": "自选股代码",
+          "interval": "盘中刷新间隔（分钟）",
+          "trading_only": "仅交易时段",
+          "notify_change_pct": "涨跌幅通知阈值%",
+          "notify_enabled": "模块通知",
+          "notify_start": "通知开始",
+          "notify_end": "通知结束"
+        },
+        "data_description": {
+          "interval": "10:00–11:30、13:00–14:30 使用；开盘 09:15–10:00 与尾盘 14:30–15:00 为 1 分钟"
+        }
+      },
+      "media": {
+        "title": "影视音乐",
+        "description": "榜单留空则全部启用",
+        "data": {
+          "enabled": "启用",
+          "items": "榜单（可选）",
+          "limit": "条数",
+          "interval": "刷新间隔（分钟）",
+          "notify_on_change": "榜首变化通知",
+          "notify_enabled": "模块通知",
+          "notify_start": "通知开始",
+          "notify_end": "通知结束"
+        }
+      }
+    }
+  }
+}

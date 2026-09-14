@@ -1,0 +1,75 @@
+{
+  "title": "Music Player",
+  "config": {
+    "abort": {
+      "single_instance_allowed": "Already configured. Only a single configuration is allowed."
+    },
+    "error": {
+      "invalid_path": "Path does not exist or is not a directory."
+    },
+    "step": {
+      "user": {
+        "title": "Music Player",
+        "description": "Set the music folder on the Home Assistant host.",
+        "data": {
+          "music_path": "Music folder path",
+          "enable_xiaoai": "Enable Xiaoai speaker"
+        },
+        "data_description": {
+          "music_path": "Absolute path on the Home Assistant host, for example /media/music.",
+          "enable_xiaoai": "Optional. Continue to the next step to select Xiaomi Home / Miot media player entities."
+        }
+      },
+      "xiaoai": {
+        "title": "Xiaoai speaker",
+        "description": "Select media player entities in Home Assistant, not a device model or IP address. Fill in one or both.",
+        "data": {
+          "xiaomi_home": "Xiaomi Home entity",
+          "xiaomi_miot": "Xiaomi Miot entity"
+        },
+        "data_description": {
+          "xiaomi_home": "Entity from the Xiaomi Home integration.",
+          "xiaomi_miot": "Entity from the Xiaomi Miot Auto integration."
+        }
+      }
+    }
+  },
+  "options": {
+    "error": {
+      "invalid_path": "Path does not exist or is not a directory."
+    },
+    "step": {
+      "init": {
+        "title": "Options",
+        "description": "Changing the music folder will trigger a rescan. Speakers must be able to reach the Home Assistant audio URL.",
+        "data": {
+          "music_path": "Music folder path",
+          "enable_xiaoai": "Enable Xiaoai speaker",
+          "xiaomi_home": "Xiaomi Home entity",
+          "xiaomi_miot": "Xiaomi Miot entity",
+          "media_players": "Other speakers"
+        },
+        "data_description": {
+          "music_path": "Absolute path on the Home Assistant host.",
+          "enable_xiaoai": "Use Xiaomi Home / Miot media player entities for Xiaoai.",
+          "xiaomi_home": "Entity from the Xiaomi Home integration.",
+          "xiaomi_miot": "Entity from the Xiaomi Miot Auto integration.",
+          "media_players": "media_player entities to push playback to."
+        }
+      }
+    }
+  },
+  "entity": {
+    "media_player": {
+      "player": {
+        "name": "Music Player"
+      }
+    }
+  },
+  "services": {
+    "scan": {
+      "name": "Scan library",
+      "description": "Rescan the local music folder."
+    }
+  }
+}

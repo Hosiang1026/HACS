@@ -1,0 +1,597 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Car Stats",
+        "description": "Optional modules; none = local stats only",
+        "data": {
+          "enable_12123": "12123",
+          "enable_amap": "Amap Auto GPS"
+        }
+      },
+      "province": {
+        "title": "12123 Login",
+        "description": "Select province to get QR code",
+        "data": {
+          "province": "Province"
+        }
+      },
+      "next": {
+        "title": "Scan QR code",
+        "description": "{msg}"
+      },
+      "next_retry": {
+        "title": "Scan QR code",
+        "description": "{msg}"
+      },
+      "reauth_confirm": {
+        "title": "12123 re-login",
+        "description": "{msg}"
+      },
+      "reauth_confirm_retry": {
+        "title": "12123 re-login",
+        "description": "{msg}"
+      },
+      "vehicle": {
+        "title": "Select vehicle",
+        "description": "Select the vehicle to track",
+        "data": {
+          "vehicle_index": "Vehicle"
+        }
+      },
+      "stats": {
+        "title": "Vehicle info",
+        "description": "Enter odometer/price directly, or pick entities (entity wins when set)",
+        "data": {
+          "name": "Car brand",
+          "plate": "Plate",
+          "fuel_grade": "Fuel grade",
+          "tank_capacity": "Tank capacity",
+          "maint_interval_km": "Maintenance interval (km)",
+          "maint_interval_days": "Maintenance interval (days)",
+          "purchase_date": "Purchase date",
+          "insurance_expiry": "Insurance expiry",
+          "inspect_expiry": "Inspection expiry",
+          "maint_date": "Last maintenance date",
+          "maint_odometer": "Maintenance odometer",
+          "battery_replace_date": "Battery replacement date",
+          "odometer": "Current odometer",
+          "fuel_price": "Fuel price",
+          "odometer_entity": "Odometer entity",
+          "fuel_price_entity": "Fuel price entity"
+        },
+        "data_description": {
+          "odometer": "Used when no odometer entity is selected",
+          "fuel_price": "Used when no fuel price entity is selected",
+          "odometer_entity": "Optional; when set, this entity is preferred and the integration odometer is read-only",
+          "fuel_price_entity": "Optional; when set, price is read from this entity for the selected grade",
+          "insurance_expiry": "Optional, for insurance days remaining",
+          "inspect_expiry": "Optional, for inspection days remaining",
+          "maint_date": "Optional, last maintenance date",
+          "maint_odometer": "Optional, odometer at last maintenance",
+          "battery_replace_date": "Optional, for battery usage time"
+        }
+      },
+      "notify": {
+        "title": "Vehicle notifications",
+        "description": "Per-item switches; yearly summary on by default. Maintenance notify when km or days remaining ≤ 0",
+        "data": {
+          "notify_violation": "Violation notify",
+          "notify_yearly": "Yearly summary notify",
+          "notify_maint": "Maintenance expiry notify",
+          "notify_insurance": "Insurance expiry notify",
+          "notify_inspect": "Inspection expiry notify",
+          "notify_license": "License expiry notify",
+          "notify": "Notify action",
+          "announce": "Announce player",
+          "expire_notify_days": "Days before expiry",
+          "notify_leave": "Leave home notify",
+          "notify_arrive": "Arrive home notify"
+        },
+        "data_description": {
+          "notify": "e.g. notify.mobile_app_xxx, multiple allowed",
+          "announce": "Optional, speak notification text",
+          "expire_notify_days": "Days before insurance/inspection/license expiry"
+        }
+      },
+      "amap_auth": {
+        "title": "Amap Auto",
+        "description": "Paste captured Key / sessionid / body",
+        "data": {
+          "amap_key": "Key (in)",
+          "amap_sessionid": "sessionid",
+          "amap_paramdata": "POST body"
+        }
+      },
+      "amap_car": {
+        "title": "Select car",
+        "description": "Owner person required for offline wake polling",
+        "data": {
+          "amap_tid": "Vehicle",
+          "owners": "Owners",
+          "poll_active_minutes": "Active poll max (min)"
+        }
+      }
+    },
+    "error": {
+      "invalid_response": "Invalid server response",
+      "connection_error": "Network error",
+      "server_error": "Server error, try again later",
+      "unknown_error": "Unknown error",
+      "no_image_data": "QR image missing",
+      "session_lost": "Session lost, please reconfigure",
+      "incomplete_auth": "Incomplete auth, please retry",
+      "please_scan": "Scan the QR with the 12123 app",
+      "second_request_failed": "Second request failed",
+      "second_request_error": "Second request error",
+      "no_redirect_url": "Redirect URL missing",
+      "auth_failed": "Failed to fetch user info during auth",
+      "missing_cookies": "Login failed, missing cookies",
+      "no_vehicles": "No vehicles found; you can continue with vehicle 1",
+      "session_recreate_failed": "Failed to recreate session",
+      "scan_timeout": "QR scan timed out, please retry",
+      "required": "Required",
+      "amap_auth_failed": "Amap auth failed",
+      "amap_no_cars": "No amap cars",
+      "amap_tid_configured": "This Amap vehicle is already configured",
+      "vehicle_configured": "This 12123 vehicle is already configured"
+    },
+    "progress": {
+      "wait_scan": "{msg}"
+    },
+    "abort": {
+      "already_configured": "Vehicle already configured",
+      "reauth_successful": "Re-authenticated",
+      "unknown_error": "Unknown error",
+      "amap_no_cars": "No amap cars",
+      "amap_tid_configured": "This Amap vehicle is already configured",
+      "vehicle_configured": "This 12123 vehicle is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Vehicle settings",
+        "menu_options": {
+          "stats": "Vehicle info",
+          "notify": "Notifications",
+          "amap": "Amap GPS",
+          "amap_session": "Amap session",
+          "amap_bind": "Bind Amap",
+          "opt_12123": "12123 vehicle",
+          "amap_unbind": "Unbind Amap",
+          "unbind_12123": "Unbind 12123",
+          "bind_12123": "Bind 12123"
+        }
+      },
+      "stats": {
+        "title": "Vehicle info",
+        "description": "Enter odometer/price directly, or pick entities (entity wins when set)",
+        "data": {
+          "name": "Car brand",
+          "plate": "Plate",
+          "fuel_grade": "Fuel grade",
+          "tank_capacity": "Tank capacity",
+          "maint_interval_km": "Maintenance interval (km)",
+          "maint_interval_days": "Maintenance interval (days)",
+          "purchase_date": "Purchase date",
+          "insurance_expiry": "Insurance expiry",
+          "inspect_expiry": "Inspection expiry",
+          "maint_date": "Last maintenance date",
+          "maint_odometer": "Maintenance odometer",
+          "battery_replace_date": "Battery replacement date",
+          "odometer": "Current odometer",
+          "fuel_price": "Fuel price",
+          "odometer_entity": "Odometer entity",
+          "fuel_price_entity": "Fuel price entity"
+        },
+        "data_description": {
+          "odometer": "Used when no odometer entity is selected",
+          "fuel_price": "Used when no fuel price entity is selected",
+          "odometer_entity": "Optional; when set, this entity is preferred and the integration odometer is read-only",
+          "fuel_price_entity": "Optional; when set, price is read from this entity for the selected grade",
+          "insurance_expiry": "Optional, for insurance days remaining",
+          "inspect_expiry": "Optional, for inspection days remaining",
+          "maint_date": "Optional, last maintenance date",
+          "maint_odometer": "Optional, odometer at last maintenance",
+          "battery_replace_date": "Optional, for battery usage time"
+        }
+      },
+      "notify": {
+        "title": "Vehicle notifications",
+        "description": "Per-item switches; yearly summary on by default. Maintenance notify when km or days remaining ≤ 0",
+        "data": {
+          "notify_violation": "Violation notify",
+          "notify_yearly": "Yearly summary notify",
+          "notify_maint": "Maintenance expiry notify",
+          "notify_insurance": "Insurance expiry notify",
+          "notify_inspect": "Inspection expiry notify",
+          "notify_license": "License expiry notify",
+          "notify": "Notify action",
+          "announce": "Announce player",
+          "expire_notify_days": "Days before expiry",
+          "notify_leave": "Leave home notify",
+          "notify_arrive": "Arrive home notify"
+        },
+        "data_description": {
+          "notify": "e.g. notify.mobile_app_xxx, multiple allowed",
+          "announce": "Optional, speak notification text",
+          "expire_notify_days": "Days before insurance/inspection/license expiry"
+        }
+      },
+      "opt_12123": {
+        "title": "12123 vehicle",
+        "menu_options": {
+          "opt_12123_index": "Vehicle index",
+          "opt_12123_relogin": "Re-login",
+          "opt_12123_logout": "Logout"
+        }
+      },
+      "opt_12123_index": {
+        "title": "Vehicle index",
+        "data": {
+          "vehicle_index": "Vehicle index"
+        }
+      },
+      "opt_12123_relogin": {
+        "title": "Re-login"
+      },
+      "opt_12123_logout": {
+        "title": "Logout"
+      },
+      "amap": {
+        "title": "Amap GPS",
+        "data": {
+          "owners": "Owners",
+          "poll_active_minutes": "Active poll max (min)",
+          "poll_exclude_zones": "Exclude zones",
+          "api_key": "API Key",
+          "private_key": "Private key",
+          "commute_zone": "Home zones",
+          "address_distance": "Address refresh distance",
+          "commute_speed": "Min speed for commute route",
+          "commute_interval": "Commute route interval"
+        },
+        "data_description": {
+          "private_key": "Optional, leave empty for no signature"
+        }
+      },
+      "amap_session": {
+        "title": "Amap credentials",
+        "description": "Paste captured Key / sessionid / body",
+        "data": {
+          "amap_key": "Key (in)",
+          "amap_sessionid": "sessionid",
+          "amap_paramdata": "POST body"
+        }
+      },
+      "amap_bind": {
+        "title": "Bind Amap",
+        "data": {
+          "amap_key": "Key (in)",
+          "amap_sessionid": "sessionid",
+          "amap_paramdata": "POST body",
+          "owners": "Owners",
+          "poll_active_minutes": "Active poll max (min)"
+        }
+      },
+      "amap_bind_car": {
+        "title": "Select car",
+        "data": {
+          "amap_tid": "Vehicle"
+        }
+      },
+      "amap_unbind": {
+        "title": "Unbind Amap",
+        "description": "Removes Amap GPS entities and credentials; local stats kept"
+      },
+      "unbind_12123": {
+        "title": "Unbind 12123",
+        "description": "Removes 12123 entities and login; local stats kept"
+      },
+      "bind_12123": {
+        "title": "Bind 12123",
+        "description": "Scan to login 12123",
+        "data": {}
+      },
+      "bind_province": {
+        "title": "12123 Login",
+        "description": "Select province for QR",
+        "data": {
+          "province": "Province"
+        }
+      },
+      "bind_next": {
+        "title": "Scan QR",
+        "description": "{msg}"
+      },
+      "bind_next_retry": {
+        "title": "Scan QR",
+        "description": "{msg}"
+      },
+      "bind_vehicle": {
+        "title": "Select vehicle",
+        "description": "Select vehicle to bind",
+        "data": {
+          "vehicle_index": "Vehicle"
+        }
+      }
+    },
+    "abort": {
+      "unknown_error": "Unknown error",
+      "amap_no_cars": "No amap cars",
+      "amap_tid_configured": "This Amap vehicle is already configured",
+      "vehicle_configured": "This 12123 vehicle is already configured"
+    },
+    "error": {
+      "invalid_response": "Invalid server response",
+      "connection_error": "Network error",
+      "server_error": "Server error, try again later",
+      "unknown_error": "Unknown error",
+      "no_image_data": "QR image missing",
+      "session_lost": "Session lost, please reconfigure",
+      "incomplete_auth": "Incomplete auth, please retry",
+      "please_scan": "Scan the QR with the 12123 app",
+      "second_request_failed": "Second request failed",
+      "second_request_error": "Second request error",
+      "no_redirect_url": "Redirect URL missing",
+      "auth_failed": "Failed to fetch user info during auth",
+      "missing_cookies": "Login failed, missing cookies",
+      "no_vehicles": "No vehicles found; you can continue with vehicle 1",
+      "session_recreate_failed": "Failed to recreate session",
+      "scan_timeout": "QR scan timed out, please retry",
+      "required": "Required",
+      "amap_auth_failed": "Amap auth failed",
+      "amap_no_cars": "No amap cars",
+      "amap_tid_configured": "This Amap vehicle is already configured",
+      "vehicle_configured": "This 12123 vehicle is already configured"
+    },
+    "progress": {
+      "wait_scan": "{msg}"
+    }
+  },
+  "entity": {
+    "number": {
+      "refuel_liters": {
+        "name": "󠀄Refuel liters"
+      },
+      "refuel_cost": {
+        "name": "󠀃Refuel cost"
+      },
+      "odometer": {
+        "name": "󠀂Odometer"
+      }
+    },
+    "text": {
+      "station_name": {
+        "name": "󠀁Gas station"
+      }
+    },
+    "button": {
+      "add_refuel": {
+        "name": "󠀅Add refuel"
+      }
+    },
+    "sensor": {
+      "avg_consumption": {
+        "name": "Avg consumption",
+        "unit_of_measurement": "L/100km"
+      },
+      "consumption_rating": {
+        "name": "Consumption rating"
+      },
+      "last_refuel_liters": {
+        "name": "Last refuel liters"
+      },
+      "last_refuel_cost": {
+        "name": "Last refuel cost"
+      },
+      "fuel_price": {
+        "name": "Fuel price",
+        "unit_of_measurement": "CNY/L"
+      },
+      "monthly_fuel_cost": {
+        "name": "Monthly fuel cost"
+      },
+      "yearly_fuel_cost": {
+        "name": "Yearly fuel cost"
+      },
+      "monthly_etc_cost": {
+        "name": "Monthly ETC cost"
+      },
+      "yearly_total_cost": {
+        "name": "Yearly total cost"
+      },
+      "cost_per_km": {
+        "name": "Cost per km",
+        "unit_of_measurement": "CNY/km"
+      },
+      "driving_odometer": {
+        "name": "Driving odometer"
+      },
+      "km_until_maint": {
+        "name": "Maintenance km remaining"
+      },
+      "days_until_maint": {
+        "name": "Maintenance days remaining"
+      },
+      "insurance_days": {
+        "name": "Insurance days remaining"
+      },
+      "usage_time": {
+        "name": "Vehicle age",
+        "unit_of_measurement": "y"
+      },
+      "battery_usage_time": {
+        "name": "Battery usage time",
+        "unit_of_measurement": "y"
+      },
+      "yearly_refuels": {
+        "name": "Yearly refuels"
+      },
+      "yearly_history": {
+        "name": "Yearly history"
+      },
+      "plate": {
+        "name": "Plate"
+      },
+      "vehicle_type": {
+        "name": "Vehicle type"
+      },
+      "vehicle_status": {
+        "name": "Vehicle status"
+      },
+      "inspection_days": {
+        "name": "Inspection days left"
+      },
+      "license_type": {
+        "name": "License type"
+      },
+      "license_status": {
+        "name": "License status"
+      },
+      "license_points": {
+        "name": "License points"
+      },
+      "license_clear": {
+        "name": "Points clear date"
+      },
+      "license_expiry": {
+        "name": "License expiry"
+      },
+      "violations": {
+        "name": "Violations"
+      },
+      "session": {
+        "name": "12123 session"
+      },
+      "login_time": {
+        "name": "12123 login time"
+      },
+      "amap_parkingtime": {
+        "name": "Parking time"
+      },
+      "amap_speed": {
+        "name": "Speed"
+      },
+      "amap_address": {
+        "name": "Address"
+      },
+      "amap_navistatus": {
+        "name": "Navi status"
+      },
+      "amap_carstatus": {
+        "name": "Car status"
+      },
+      "amap_drivetime": {
+        "name": "Drive time"
+      },
+      "amap_commute_distance": {
+        "name": "Commute distance",
+        "unit_of_measurement": "km"
+      },
+      "amap_commute_time": {
+        "name": "Commute time"
+      },
+      "amap_navi_dest": {
+        "name": "Navi destination"
+      },
+      "amap_commute_toll": {
+        "name": "Toll"
+      },
+      "amap_traffic_lights": {
+        "name": "Traffic lights"
+      },
+      "amap_course": {
+        "name": "Course"
+      },
+      "amap_restrict_tail": {
+        "name": "Restrict tail"
+      },
+      "amap_querytime": {
+        "name": "Query time"
+      },
+      "amap_login_time": {
+        "name": "Amap login time"
+      },
+      "amap_api_calls": {
+        "name": "Daily Amap API calls"
+      }
+    },
+    "device_tracker": {
+      "gps": {
+        "name": "Location"
+      }
+    }
+  },
+  "services": {
+    "add_refuel": {
+      "name": "Add refuel",
+      "description": "Write a refuel record",
+      "fields": {
+        "liters": {
+          "name": "Liters",
+          "description": "Refuel liters"
+        },
+        "cost": {
+          "name": "Cost",
+          "description": "Refuel cost"
+        },
+        "odometer": {
+          "name": "Odometer",
+          "description": "Current odometer"
+        },
+        "full": {
+          "name": "Full tank",
+          "description": "Whether tank was filled"
+        },
+        "station": {
+          "name": "Station",
+          "description": "Gas station (optional)"
+        }
+      }
+    },
+    "add_expense": {
+      "name": "Add expense",
+      "description": "Write an expense (etc / park / insure / repair / other)",
+      "fields": {
+        "type": {
+          "name": "Type",
+          "description": "etc / park / insure / repair / other"
+        },
+        "amount": {
+          "name": "Amount",
+          "description": "Expense amount"
+        }
+      }
+    },
+    "add_maintenance": {
+      "name": "Add maintenance",
+      "description": "Write maintenance record and sync maintenance date/odometer in vehicle info",
+      "fields": {
+        "odometer": {
+          "name": "Odometer",
+          "description": "Odometer at maintenance"
+        },
+        "type": {
+          "name": "Type",
+          "description": "Maintenance type"
+        },
+        "cost": {
+          "name": "Cost",
+          "description": "Maintenance cost"
+        }
+      }
+    },
+    "set_odometer": {
+      "name": "Set odometer",
+      "description": "Update current odometer",
+      "fields": {
+        "odometer": {
+          "name": "Odometer",
+          "description": "Current odometer"
+        }
+      }
+    }
+  }
+}

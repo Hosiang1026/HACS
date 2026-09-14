@@ -1,0 +1,22 @@
+refresh:
+  name: Refresh
+  description: Refresh data
+  fields:
+    module:
+      name: Module
+      description: Module to refresh
+      example: all
+      selector:
+        select:
+          translation_key: refresh_module
+          options:
+            - all
+            - lottery
+            - metal
+            - news
+            - stock
+            - media
+
+clear_gold_low:
+  name: Clear gold low
+  description: Reset gold historical low

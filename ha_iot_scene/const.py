@@ -1,0 +1,118 @@
+from homeassistant.const import Platform
+
+DOMAIN = "ha_iot_scene"
+
+PLATFORMS = [
+    Platform.SENSOR,
+    Platform.SWITCH,
+    Platform.BUTTON,
+]
+
+CONF_NAME = "name"
+CONF_TTS_DEVICES = "tts_devices"
+CONF_RULES = "rules"
+
+CONF_RULE_ID = "rule_id"
+CONF_RULE_NAME = "rule_name"
+CONF_RULE_ROOM = "rule_room"
+CONF_RULE_ENABLED = "rule_enabled"
+CONF_TRIGGER_ENTITY = "trigger_entity"
+CONF_TRIGGER_PERSON = "trigger_person"
+CONF_TRIGGER_TYPE = "trigger_type"
+CONF_TRIGGER_TO = "trigger_to"
+CONF_TRIGGER_FROM = "trigger_from"
+CONF_TRIGGER_TIME = "trigger_time"
+CONF_WEEKDAYS = "weekdays"
+CONF_NUMERIC_THRESHOLD = "numeric_threshold"
+CONF_CONDITION_LOGIC = "condition_logic"
+CONF_CONDITIONS = "conditions"
+CONF_COND_1_ENTITY = "cond_1_entity"
+CONF_COND_1_STATE = "cond_1_state"
+CONF_COND_2_ENTITY = "cond_2_entity"
+CONF_COND_2_STATE = "cond_2_state"
+CONF_COND_3_ENTITY = "cond_3_entity"
+CONF_COND_3_STATE = "cond_3_state"
+CONF_TIME_AFTER = "time_after"
+CONF_TIME_BEFORE = "time_before"
+CONF_TARGET_ENTITIES = "target_entities"
+CONF_TARGET_ACTION = "target_action"
+CONF_MESSAGE = "message"
+CONF_MESSAGE_FAIL = "message_fail"
+CONF_BROADCAST_SUCCESS = "broadcast_success"
+CONF_BROADCAST_FAIL = "broadcast_fail"
+CONF_COOLDOWN = "cooldown"
+CONF_DELAY = "delay"
+CONF_VERIFY_DELAY = "verify_delay"
+
+TRIGGER_STATE = "state"
+TRIGGER_NUMERIC_ABOVE = "numeric_above"
+TRIGGER_NUMERIC_BELOW = "numeric_below"
+TRIGGER_TIME = "time"
+TRIGGER_ZONE_ENTER = "zone_enter"
+TRIGGER_ZONE_LEAVE = "zone_leave"
+
+TRIGGER_TYPES = [
+    TRIGGER_STATE,
+    TRIGGER_NUMERIC_ABOVE,
+    TRIGGER_NUMERIC_BELOW,
+    TRIGGER_TIME,
+    TRIGGER_ZONE_ENTER,
+    TRIGGER_ZONE_LEAVE,
+]
+
+CONDITION_AND = "and"
+CONDITION_OR = "or"
+CONDITION_LOGICS = [CONDITION_AND, CONDITION_OR]
+
+WEEKDAY_MON = "mon"
+WEEKDAY_TUE = "tue"
+WEEKDAY_WED = "wed"
+WEEKDAY_THU = "thu"
+WEEKDAY_FRI = "fri"
+WEEKDAY_SAT = "sat"
+WEEKDAY_SUN = "sun"
+WEEKDAYS = [
+    WEEKDAY_MON,
+    WEEKDAY_TUE,
+    WEEKDAY_WED,
+    WEEKDAY_THU,
+    WEEKDAY_FRI,
+    WEEKDAY_SAT,
+    WEEKDAY_SUN,
+]
+WEEKDAY_INDEX = {
+    WEEKDAY_MON: 0,
+    WEEKDAY_TUE: 1,
+    WEEKDAY_WED: 2,
+    WEEKDAY_THU: 3,
+    WEEKDAY_FRI: 4,
+    WEEKDAY_SAT: 5,
+    WEEKDAY_SUN: 6,
+}
+
+ACTION_TURN_ON = "turn_on"
+ACTION_TURN_OFF = "turn_off"
+ACTION_TOGGLE = "toggle"
+ACTION_OPEN = "open"
+ACTION_CLOSE = "close"
+ACTION_NONE = "none"
+
+TARGET_ACTIONS = [
+    ACTION_NONE,
+    ACTION_TURN_ON,
+    ACTION_TURN_OFF,
+    ACTION_TOGGLE,
+    ACTION_OPEN,
+    ACTION_CLOSE,
+]
+
+DEFAULT_COOLDOWN = 30
+DEFAULT_DELAY = 0
+DEFAULT_VERIFY_DELAY = 3
+DEFAULT_TRIGGER_TYPE = TRIGGER_STATE
+DEFAULT_TARGET_ACTION = ACTION_NONE
+DEFAULT_BROADCAST_SUCCESS = False
+DEFAULT_BROADCAST_FAIL = False
+DEFAULT_CONDITION_LOGIC = CONDITION_AND
+
+STORAGE_VERSION = 1

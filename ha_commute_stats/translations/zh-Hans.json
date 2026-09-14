@@ -1,0 +1,486 @@
+{
+  "title": "通勤统计",
+  "entity": {
+    "sensor": {
+      "home_count": {
+        "name": "在家人数"
+      },
+      "comp_count": {
+        "name": "公司人数"
+      },
+      "waidi_count": {
+        "name": "外地人数"
+      },
+      "out_count": {
+        "name": "外出人数"
+      },
+      "home_duration": {
+        "name": "在家时长"
+      },
+      "activity": {
+        "name": "活动状态",
+        "state": {
+          "home": "在家",
+          "company": "公司",
+          "out": "外出",
+          "away": "外地"
+        }
+      },
+      "work_duration": {
+        "name": "工作时长"
+      },
+      "work_time": {
+        "name": "上班时长"
+      },
+      "over_time": {
+        "name": "加班时长"
+      },
+      "work_state": {
+        "name": "上班状态",
+        "state": {
+          "holiday": "放假中",
+          "rest": "休息中",
+          "off_work": "已下班",
+          "lunch": "午休中",
+          "overtime": "加班中",
+          "working": "工作中"
+        }
+      }
+    },
+    "switch": {
+      "away": {
+        "name": "离家标记"
+      },
+      "work": {
+        "name": "上班标记"
+      }
+    },
+    "number": {
+      "comp_time": {
+        "name": "调休时长"
+      },
+      "month_salary": {
+        "name": "月薪累计",
+        "unit_of_measurement": "元"
+      }
+    },
+    "datetime": {
+      "work_start_time": {
+        "name": "上班开始时间"
+      },
+      "work_end_time": {
+        "name": "下班结束时间"
+      }
+    }
+  },
+  "exceptions": {
+    "default_name": {
+      "message": "通勤统计"
+    },
+    "person": {
+      "message": "人员"
+    },
+    "no_commute": {
+      "message": "未获取通勤信息"
+    },
+    "zero_minutes": {
+      "message": "0分钟"
+    },
+    "hours_minutes": {
+      "message": "{hours}小时{minutes}分钟"
+    },
+    "days_hours_minutes": {
+      "message": "{days}天{hours}小时{minutes}分钟"
+    },
+    "minutes": {
+      "message": "{minutes}分钟"
+    },
+    "driving": {
+      "message": "驾车"
+    },
+    "bicycling": {
+      "message": "骑车"
+    },
+    "commute_home": {
+      "message": "回家距离：{km}公里\n回家时间：{time}"
+    },
+    "commute_home_mode": {
+      "message": "{mode}回家距离：{km}公里\n回家时间：{time}"
+    },
+    "arrive_title": {
+      "message": "{name}到家通知"
+    },
+    "leave_title": {
+      "message": "{name}离家通知"
+    },
+    "arrive_message": {
+      "message": "当前位置：{addr}\n当前时间：{now}\n"
+    },
+    "leave_message": {
+      "message": "{commute}当前位置：{addr}\n当前时间：{now}\n"
+    },
+    "station_enter_title": {
+      "message": "{name}进站通知"
+    },
+    "station_leave_title": {
+      "message": "{name}出站通知"
+    },
+    "station_message": {
+      "message": "站点：{station}\n{commute}当前位置：{addr}\n当前时间：{now}\n"
+    },
+    "announce_join": {
+      "message": "{title}。{commute}"
+    }
+  },
+  "config": {
+    "step": {
+      "user": {
+        "title": "全局设置",
+        "data": {
+          "name": "名称",
+          "total_people": "总人数",
+          "indoor_sensor": "室内人数传感器",
+          "notify": "通知动作",
+          "announce": "播报设备",
+          "amap_key": "高德Key",
+          "holiday_sensor": "今日类型"
+        }
+      },
+      "person": {
+        "title": "添加人员",
+        "data": {
+          "person_name": "名称",
+          "person": "人员实体",
+          "activity_sensor": "活动状态实体",
+          "addr_sensor": "位置",
+          "commute_sensor": "通勤信息",
+          "commute_distance": "通勤距离",
+          "commute_time": "通勤时间"
+        }
+      },
+      "home_rules": {
+        "title": "家庭设置",
+        "data": {
+          "home_zones": "家区域",
+          "lat_row": "纬度",
+          "area_lat_min": "最小值",
+          "area_lat_max": "最大值",
+          "lon_row": "经度",
+          "area_lon_min": "最小值",
+          "area_lon_max": "最大值",
+          "notify_arrive": "回家通知",
+          "notify_leave": "离家通知",
+          "arrive_row": "回家通知时段",
+          "arrive_start": "开始",
+          "arrive_end": "结束",
+          "leave_row": "离家通知时段",
+          "leave_start": "开始",
+          "leave_end": "结束",
+          "notify_station_enter": "进站通知",
+          "station_enter_zones": "进站区域",
+          "notify_station_leave": "出站通知",
+          "station_leave_zones": "出站区域",
+          "reset_home_duration": "每日重置在家时长"
+        },
+        "sections": {
+          "city_area": {
+            "name": "本地城市范围",
+            "data": {
+              "lat_row": "纬度",
+              "area_lat_min": "最小值",
+              "area_lat_max": "最大值",
+              "lon_row": "经度",
+              "area_lon_min": "最小值",
+              "area_lon_max": "最大值"
+            }
+          }
+        }
+      },
+      "work_rules": {
+        "title": "工时与薪酬",
+        "data": {
+          "work_zones": "公司区域",
+          "standard_hours": "标准工时",
+          "lunch_start": "午休开始",
+          "lunch_end": "午休结束",
+          "overtime_start": "加班起算时间",
+          "clock_in_start": "上班打卡开始",
+          "clock_in_end": "上班打卡结束",
+          "clock_out_start": "下班打卡开始",
+          "clock_out_end": "下班打卡结束",
+          "base_salary": "日薪",
+          "over_hourly_wage": "加班时薪",
+          "holiday_hourly_wage": "节假时薪",
+          "comp_threshold": "调休起算加班",
+          "comp_deduct": "调休扣除",
+          "daily_reset": "每日重置",
+          "monthly_reset_day": "每月重置日",
+          "work_enabled": "启用上班统计",
+          "work_notify": "启用通知"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "已配置通勤统计"
+    },
+    "error": {
+      "already_person": "该人员已添加"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "通勤统计",
+        "menu_options": {
+          "global": "全局设置",
+          "household": "家庭设置",
+          "edit_work": "公司设置",
+          "add_person": "添加人员",
+          "edit_person": "编辑人员",
+          "remove_person": "删除人员"
+        }
+      },
+      "global": {
+        "title": "全局设置",
+        "data": {
+          "total_people": "总人数",
+          "indoor_sensor": "室内人数传感器",
+          "notify": "通知动作",
+          "announce": "播报设备",
+          "amap_key": "高德Key",
+          "holiday_sensor": "今日类型"
+        }
+      },
+      "household": {
+        "title": "家庭设置",
+        "data": {
+          "person": "人员"
+        }
+      },
+      "household_form": {
+        "title": "家庭设置",
+        "data": {
+          "home_zones": "家区域",
+          "lat_row": "纬度",
+          "area_lat_min": "最小值",
+          "area_lat_max": "最大值",
+          "lon_row": "经度",
+          "area_lon_min": "最小值",
+          "area_lon_max": "最大值",
+          "notify_arrive": "回家通知",
+          "notify_leave": "离家通知",
+          "arrive_row": "回家通知时段",
+          "arrive_start": "开始",
+          "arrive_end": "结束",
+          "leave_row": "离家通知时段",
+          "leave_start": "开始",
+          "leave_end": "结束",
+          "notify_station_enter": "进站通知",
+          "station_enter_zones": "进站区域",
+          "notify_station_leave": "出站通知",
+          "station_leave_zones": "出站区域",
+          "reset_home_duration": "每日重置在家时长"
+        },
+        "sections": {
+          "city_area": {
+            "name": "本地城市范围",
+            "data": {
+              "lat_row": "纬度",
+              "area_lat_min": "最小值",
+              "area_lat_max": "最大值",
+              "lon_row": "经度",
+              "area_lon_min": "最小值",
+              "area_lon_max": "最大值"
+            }
+          }
+        }
+      },
+      "add_person": {
+        "title": "添加人员",
+        "data": {
+          "person_name": "名称",
+          "person": "人员实体",
+          "activity_sensor": "活动状态实体",
+          "addr_sensor": "位置",
+          "commute_sensor": "通勤信息",
+          "commute_distance": "通勤距离",
+          "commute_time": "通勤时间"
+        }
+      },
+      "edit_person": {
+        "title": "编辑人员",
+        "data": {
+          "person": "人员"
+        }
+      },
+      "edit_form": {
+        "title": "编辑人员",
+        "data": {
+          "person_name": "名称",
+          "person": "人员实体",
+          "activity_sensor": "活动状态实体",
+          "addr_sensor": "位置",
+          "commute_sensor": "通勤信息",
+          "commute_distance": "通勤距离",
+          "commute_time": "通勤时间"
+        }
+      },
+      "remove_person": {
+        "title": "删除人员",
+        "data": {
+          "person": "人员"
+        }
+      },
+      "add_home_rules": {
+        "title": "家庭设置",
+        "data": {
+          "home_zones": "家区域",
+          "lat_row": "纬度",
+          "area_lat_min": "最小值",
+          "area_lat_max": "最大值",
+          "lon_row": "经度",
+          "area_lon_min": "最小值",
+          "area_lon_max": "最大值",
+          "notify_arrive": "回家通知",
+          "notify_leave": "离家通知",
+          "arrive_row": "回家通知时段",
+          "arrive_start": "开始",
+          "arrive_end": "结束",
+          "leave_row": "离家通知时段",
+          "leave_start": "开始",
+          "leave_end": "结束",
+          "notify_station_enter": "进站通知",
+          "station_enter_zones": "进站区域",
+          "notify_station_leave": "出站通知",
+          "station_leave_zones": "出站区域",
+          "reset_home_duration": "每日重置在家时长"
+        },
+        "sections": {
+          "city_area": {
+            "name": "本地城市范围",
+            "data": {
+              "lat_row": "纬度",
+              "area_lat_min": "最小值",
+              "area_lat_max": "最大值",
+              "lon_row": "经度",
+              "area_lon_min": "最小值",
+              "area_lon_max": "最大值"
+            }
+          }
+        }
+      },
+      "add_work_rules": {
+        "title": "工时与薪酬",
+        "data": {
+          "work_zones": "公司区域",
+          "standard_hours": "标准工时",
+          "lunch_start": "午休开始",
+          "lunch_end": "午休结束",
+          "overtime_start": "加班起算时间",
+          "clock_in_start": "上班打卡开始",
+          "clock_in_end": "上班打卡结束",
+          "clock_out_start": "下班打卡开始",
+          "clock_out_end": "下班打卡结束",
+          "base_salary": "日薪",
+          "over_hourly_wage": "加班时薪",
+          "holiday_hourly_wage": "节假时薪",
+          "comp_threshold": "调休起算加班",
+          "comp_deduct": "调休扣除",
+          "daily_reset": "每日重置",
+          "monthly_reset_day": "每月重置日",
+          "work_enabled": "启用上班统计",
+          "work_notify": "启用通知"
+        }
+      },
+      "edit_work_rules": {
+        "title": "工时与薪酬",
+        "data": {
+          "work_zones": "公司区域",
+          "standard_hours": "标准工时",
+          "lunch_start": "午休开始",
+          "lunch_end": "午休结束",
+          "overtime_start": "加班起算时间",
+          "clock_in_start": "上班打卡开始",
+          "clock_in_end": "上班打卡结束",
+          "clock_out_start": "下班打卡开始",
+          "clock_out_end": "下班打卡结束",
+          "base_salary": "日薪",
+          "over_hourly_wage": "加班时薪",
+          "holiday_hourly_wage": "节假时薪",
+          "comp_threshold": "调休起算加班",
+          "comp_deduct": "调休扣除",
+          "daily_reset": "每日重置",
+          "monthly_reset_day": "每月重置日",
+          "work_enabled": "启用上班统计",
+          "work_notify": "启用通知"
+        }
+      },
+      "edit_work_form": {
+        "title": "工时与薪酬",
+        "data": {
+          "work_zones": "公司区域",
+          "standard_hours": "标准工时",
+          "lunch_start": "午休开始",
+          "lunch_end": "午休结束",
+          "overtime_start": "加班起算时间",
+          "clock_in_start": "上班打卡开始",
+          "clock_in_end": "上班打卡结束",
+          "clock_out_start": "下班打卡开始",
+          "clock_out_end": "下班打卡结束",
+          "base_salary": "日薪",
+          "over_hourly_wage": "加班时薪",
+          "holiday_hourly_wage": "节假时薪",
+          "comp_threshold": "调休起算加班",
+          "comp_deduct": "调休扣除",
+          "daily_reset": "每日重置",
+          "monthly_reset_day": "每月重置日",
+          "work_enabled": "启用上班统计",
+          "work_notify": "启用通知"
+        }
+      },
+      "edit_work": {
+        "title": "公司设置",
+        "data": {
+          "person": "人员"
+        }
+      }
+    },
+    "abort": {
+      "no_people": "没有人员",
+      "no_work_people": "没有配置公司区域的人员"
+    },
+    "error": {
+      "already_person": "该人员已添加"
+    }
+  },
+  "common": {
+    "clock_in_title": "{name}上班通知",
+    "clock_out_title": "{name}下班通知",
+    "unknown": "unknown",
+    "hours_minutes": "{hours}小时{minutes}分钟",
+    "days_hours_minutes": "{days}天{hours}小时{minutes}分钟",
+    "minutes": "{minutes}分钟",
+    "km_int": "{km}公里",
+    "km_float": "{km}公里",
+    "clock_in_message": "离家距离：{dist}\n离家时间：{time}\n当前位置：{addr}\n当前时间：{now}",
+    "clock_out_message": "加班时长：{over_time} 小时\n调休时长：{comp_time} 小时\n当前位置：{addr}\n当前时间：{now}",
+    "commute": "回家距离：{dist} 回家时间：{time}"
+  },
+  "selector": {
+    "hours": {
+      "unit_of_measurement": {
+        "h": "小时"
+      }
+    },
+    "cny_day": {
+      "unit_of_measurement": {
+        "CNY/day": "元/天"
+      }
+    },
+    "cny_hour": {
+      "unit_of_measurement": {
+        "CNY/h": "元/小时"
+      }
+    }
+  }
+}

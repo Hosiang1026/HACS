@@ -1,0 +1,406 @@
+{
+  "title": "智能场景",
+  "config": {
+    "step": {
+      "user": {
+        "title": "场景基本信息",
+        "data": {
+          "name": "场景名称",
+          "tts_devices": "播报设备"
+        }
+      },
+      "rule": {
+        "title": "添加规则",
+        "sections": {
+          "rule_basic": {
+            "name": "基本信息",
+            "data": {
+              "rule_name": "规则名称",
+              "rule_room": "房间",
+              "rule_enabled": "启用规则"
+            }
+          },
+          "trigger": {
+            "name": "触发条件",
+            "data": {
+              "trigger_type": "触发类型",
+              "weekdays": "星期"
+            }
+          },
+          "trigger_state": {
+            "name": "状态变化",
+            "data": {
+              "trigger_entity": "控制端实体",
+              "trigger_to": "变为状态",
+              "trigger_from": "来自状态"
+            }
+          },
+          "trigger_numeric": {
+            "name": "数值高于/低于",
+            "data": {
+              "trigger_entity": "控制端实体",
+              "numeric_threshold": "数值阈值"
+            }
+          },
+          "conditions": {
+            "name": "附加条件",
+            "data": {
+              "condition_logic": "条件逻辑",
+              "cond_1_row": "条件1",
+              "cond_1_entity": "实体",
+              "cond_1_state": "状态",
+              "cond_2_row": "条件2",
+              "cond_2_entity": "实体",
+              "cond_2_state": "状态",
+              "cond_3_row": "条件3",
+              "cond_3_entity": "实体",
+              "cond_3_state": "状态",
+              "time_row": "时间窗",
+              "time_after": "起",
+              "time_before": "止"
+            }
+          },
+          "action": {
+            "name": "执行动作",
+            "data": {
+              "target_entities": "被控制实体",
+              "target_action": "控制动作"
+            }
+          },
+          "broadcast": {
+            "name": "播报",
+            "data": {
+              "broadcast_success": "启用成功播报",
+              "message": "成功播报文案",
+              "broadcast_fail": "启用失败播报",
+              "message_fail": "失败播报文案"
+            }
+          },
+          "timing": {
+            "name": "时序",
+            "data": {
+              "cooldown": "冷却秒数",
+              "delay": "执行前延迟",
+              "verify_delay": "状态检查等待"
+            }
+          },
+          "time_trigger": {
+            "name": "定时触发",
+            "data": {
+              "trigger_time": "定时时刻"
+            }
+          },
+          "trigger_zone": {
+            "name": "人员进/出区域",
+            "data": {
+              "trigger_person": "人员实体",
+              "trigger_entity": "区域实体"
+            }
+          }
+        }
+      },
+      "rule_menu": {
+        "title": "继续添加规则？",
+        "menu_options": {
+          "rule": "再加一条规则",
+          "finish": "完成创建"
+        }
+      },
+      "finish": {
+        "title": "完成"
+      }
+    },
+    "abort": {
+      "already_configured": "该场景已配置",
+      "no_rules": "暂无规则",
+      "unknown": "未知错误"
+    },
+    "error": {
+      "name_required": "请填写场景名称",
+      "trigger_entity_required": "请填写控制端实体",
+      "trigger_time_required": "请填写定时时刻",
+      "trigger_zone_required": "请填写人员实体和区域实体"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "场景选项",
+        "menu_options": {
+          "settings": "基本设置",
+          "add_rule": "添加规则",
+          "edit_rule": "编辑规则",
+          "remove_rule": "删除规则"
+        }
+      },
+      "settings": {
+        "title": "基本设置",
+        "data": {
+          "name": "场景名称",
+          "tts_devices": "播报设备"
+        }
+      },
+      "add_rule": {
+        "title": "添加规则",
+        "sections": {
+          "rule_basic": {
+            "name": "基本信息",
+            "data": {
+              "rule_name": "规则名称",
+              "rule_room": "房间",
+              "rule_enabled": "启用规则"
+            }
+          },
+          "trigger": {
+            "name": "触发条件",
+            "data": {
+              "trigger_type": "触发类型",
+              "weekdays": "星期"
+            }
+          },
+          "trigger_state": {
+            "name": "状态变化",
+            "data": {
+              "trigger_entity": "控制端实体",
+              "trigger_to": "变为状态",
+              "trigger_from": "来自状态"
+            }
+          },
+          "trigger_numeric": {
+            "name": "数值高于/低于",
+            "data": {
+              "trigger_entity": "控制端实体",
+              "numeric_threshold": "数值阈值"
+            }
+          },
+          "conditions": {
+            "name": "附加条件",
+            "data": {
+              "condition_logic": "条件逻辑",
+              "cond_1_row": "条件1",
+              "cond_1_entity": "实体",
+              "cond_1_state": "状态",
+              "cond_2_row": "条件2",
+              "cond_2_entity": "实体",
+              "cond_2_state": "状态",
+              "cond_3_row": "条件3",
+              "cond_3_entity": "实体",
+              "cond_3_state": "状态",
+              "time_row": "时间窗",
+              "time_after": "起",
+              "time_before": "止"
+            }
+          },
+          "action": {
+            "name": "执行动作",
+            "data": {
+              "target_entities": "被控制实体",
+              "target_action": "控制动作"
+            }
+          },
+          "broadcast": {
+            "name": "播报",
+            "data": {
+              "broadcast_success": "启用成功播报",
+              "message": "成功播报文案",
+              "broadcast_fail": "启用失败播报",
+              "message_fail": "失败播报文案"
+            }
+          },
+          "timing": {
+            "name": "时序",
+            "data": {
+              "cooldown": "冷却秒数",
+              "delay": "执行前延迟",
+              "verify_delay": "状态检查等待"
+            }
+          },
+          "time_trigger": {
+            "name": "定时触发",
+            "data": {
+              "trigger_time": "定时时刻"
+            }
+          },
+          "trigger_zone": {
+            "name": "人员进/出区域",
+            "data": {
+              "trigger_person": "人员实体",
+              "trigger_entity": "区域实体"
+            }
+          }
+        }
+      },
+      "edit_rule": {
+        "title": "选择规则",
+        "data": {
+          "rule_id": "规则"
+        }
+      },
+      "edit_rule_form": {
+        "title": "编辑规则",
+        "sections": {
+          "rule_basic": {
+            "name": "基本信息",
+            "data": {
+              "rule_name": "规则名称",
+              "rule_room": "房间",
+              "rule_enabled": "启用规则"
+            }
+          },
+          "trigger": {
+            "name": "触发条件",
+            "data": {
+              "trigger_type": "触发类型",
+              "weekdays": "星期"
+            }
+          },
+          "trigger_state": {
+            "name": "状态变化",
+            "data": {
+              "trigger_entity": "控制端实体",
+              "trigger_to": "变为状态",
+              "trigger_from": "来自状态"
+            }
+          },
+          "trigger_numeric": {
+            "name": "数值高于/低于",
+            "data": {
+              "trigger_entity": "控制端实体",
+              "numeric_threshold": "数值阈值"
+            }
+          },
+          "conditions": {
+            "name": "附加条件",
+            "data": {
+              "condition_logic": "条件逻辑",
+              "cond_1_row": "条件1",
+              "cond_1_entity": "实体",
+              "cond_1_state": "状态",
+              "cond_2_row": "条件2",
+              "cond_2_entity": "实体",
+              "cond_2_state": "状态",
+              "cond_3_row": "条件3",
+              "cond_3_entity": "实体",
+              "cond_3_state": "状态",
+              "time_row": "时间窗",
+              "time_after": "起",
+              "time_before": "止"
+            }
+          },
+          "action": {
+            "name": "执行动作",
+            "data": {
+              "target_entities": "被控制实体",
+              "target_action": "控制动作"
+            }
+          },
+          "broadcast": {
+            "name": "播报",
+            "data": {
+              "broadcast_success": "启用成功播报",
+              "message": "成功播报文案",
+              "broadcast_fail": "启用失败播报",
+              "message_fail": "失败播报文案"
+            }
+          },
+          "timing": {
+            "name": "时序",
+            "data": {
+              "cooldown": "冷却秒数",
+              "delay": "执行前延迟",
+              "verify_delay": "状态检查等待"
+            }
+          },
+          "time_trigger": {
+            "name": "定时触发",
+            "data": {
+              "trigger_time": "定时时刻"
+            }
+          },
+          "trigger_zone": {
+            "name": "人员进/出区域",
+            "data": {
+              "trigger_person": "人员实体",
+              "trigger_entity": "区域实体"
+            }
+          }
+        }
+      },
+      "remove_rule": {
+        "title": "删除规则",
+        "data": {
+          "rule_id": "规则"
+        }
+      }
+    },
+    "abort": {
+      "no_rules": "暂无规则"
+    },
+    "error": {
+      "name_required": "请填写场景名称",
+      "trigger_entity_required": "请填写控制端实体",
+      "trigger_time_required": "请填写定时时刻",
+      "trigger_zone_required": "请填写人员实体和区域实体"
+    }
+  },
+  "selector": {
+    "trigger_type": {
+      "options": {
+        "state": "状态变化",
+        "numeric_above": "数值高于",
+        "numeric_below": "数值低于",
+        "time": "定时触发",
+        "zone_enter": "人员进入区域",
+        "zone_leave": "人员离开区域"
+      }
+    },
+    "condition_logic": {
+      "options": {
+        "and": "全部满足 (AND)",
+        "or": "任一满足 (OR)"
+      }
+    },
+    "weekdays": {
+      "options": {
+        "mon": "周一",
+        "tue": "周二",
+        "wed": "周三",
+        "thu": "周四",
+        "fri": "周五",
+        "sat": "周六",
+        "sun": "周日"
+      }
+    },
+    "target_action": {
+      "options": {
+        "turn_on": "打开",
+        "turn_off": "关闭",
+        "toggle": "切换",
+        "open": "打开(窗帘)",
+        "close": "关闭(窗帘)",
+        "none": "无"
+      }
+    }
+  },
+  "entity": {
+    "switch": {
+      "enabled": {
+        "name": "启用"
+      }
+    },
+    "sensor": {
+      "enabled_count": {
+        "name": "启用规则数"
+      },
+      "disabled_count": {
+        "name": "禁用规则数"
+      },
+      "today_success": {
+        "name": "今日执行成功"
+      },
+      "today_fail": {
+        "name": "今日执行失败"
+      }
+    }
+  }
+}

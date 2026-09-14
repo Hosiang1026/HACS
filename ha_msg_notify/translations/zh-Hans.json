@@ -1,0 +1,245 @@
+{
+  "title": "通知管理",
+  "entity": {
+    "sensor": {
+      "current_message": { "name": "当前消息" },
+      "current_source": { "name": "当前来源" },
+      "message_time": { "name": "消息时间" },
+      "message_count": { "name": "消息数量" },
+      "message_queue": { "name": "消息队列" },
+      "enabled_channels": { "name": "启用渠道数量" },
+      "disabled_channels": { "name": "禁用渠道数量" }
+    },
+    "switch": {
+      "carousel_enabled": { "name": "消息轮播" }
+    },
+    "number": {
+      "carousel_interval": { "name": "轮播间隔" }
+    },
+    "button": {
+      "test_send": { "name": "测试发送" }
+    }
+  },
+  "exceptions": {
+    "default_name": { "message": "通知管理" }
+  },
+  "selector": {
+    "channel_type": {
+      "options": {
+        "wework_robot": "企业微信群机器人",
+        "dingtalk": "钉钉群机器人",
+        "feishu": "飞书群机器人",
+        "smtp": "邮件 SMTP",
+        "rest_command": "REST命令",
+        "shell_command": "Shell命令",
+        "notify": "HA通知服务",
+        "announce": "语音播报",
+        "display": "屏幕显示"
+      }
+    },
+    "encryption": {
+      "options": {
+        "starttls": "STARTTLS",
+        "tls": "TLS/SSL",
+        "none": "无加密"
+      }
+    },
+    "method": {
+      "options": {
+        "get": "GET",
+        "post": "POST",
+        "put": "PUT",
+        "delete": "DELETE"
+      }
+    },
+    "message_mode": {
+      "options": {
+        "append": "追加",
+        "replace": "替换"
+      }
+    }
+  },
+  "config": {
+    "step": {
+      "user": {
+        "title": "轮播设置",
+        "data": {
+          "name": "名称",
+          "carousel_interval": "轮播间隔(秒)",
+          "carousel_enabled": "启用轮播",
+          "max_messages": "最大消息数",
+          "message_mode": "入队模式"
+        }
+      },
+      "channel": {
+        "title": "添加通知渠道",
+        "data": {
+          "channel_name": "渠道名称",
+          "channel_id": "渠道ID",
+          "channel_type": "渠道类型",
+          "enabled": "启用",
+          "add_to_carousel": "加入轮播队列"
+        }
+      },
+      "channel_config": {
+        "title": "渠道参数",
+        "data": {
+          "resource": "Webhook密钥",
+          "secret": "加签密钥",
+          "url": "请求地址",
+          "method": "请求方法",
+          "command": "Shell命令",
+          "server": "SMTP服务器",
+          "port": "端口",
+          "timeout": "超时(秒)",
+          "sender": "发件人",
+          "encryption": "加密方式",
+          "username": "用户名",
+          "password": "密码",
+          "recipient": "收件人",
+          "sender_name": "发件人名称",
+          "target": "目标实体"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "已配置通知管理"
+    },
+    "error": {
+      "invalid_channel_id": "渠道 ID 仅允许小写字母、数字、下划线",
+      "already_channel": "该渠道 ID 已存在"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "通知管理",
+        "menu_options": {
+          "carousel": "轮播设置",
+          "add_channel": "添加渠道",
+          "edit_channel": "编辑渠道",
+          "remove_channel": "删除渠道",
+          "remove_message": "删除轮播消息"
+        }
+      },
+      "carousel": {
+        "title": "轮播设置",
+        "data": {
+          "carousel_interval": "轮播间隔(秒)",
+          "carousel_enabled": "启用轮播",
+          "max_messages": "最大消息数",
+          "message_mode": "入队模式"
+        }
+      },
+      "add_channel": {
+        "title": "添加渠道",
+        "data": {
+          "channel_name": "渠道名称",
+          "channel_id": "渠道ID",
+          "channel_type": "渠道类型",
+          "enabled": "启用",
+          "add_to_carousel": "加入轮播队列"
+        }
+      },
+      "add_channel_config": {
+        "title": "渠道参数",
+        "data": {
+          "resource": "Webhook密钥",
+          "secret": "加签密钥",
+          "url": "请求地址",
+          "method": "请求方法",
+          "command": "Shell命令",
+          "server": "SMTP服务器",
+          "port": "端口",
+          "timeout": "超时(秒)",
+          "sender": "发件人",
+          "encryption": "加密方式",
+          "username": "用户名",
+          "password": "密码",
+          "recipient": "收件人",
+          "sender_name": "发件人名称",
+          "target": "目标实体"
+        }
+      },
+      "edit_channel": {
+        "title": "编辑渠道",
+        "data": {
+          "channel": "选择渠道"
+        }
+      },
+      "edit_form": {
+        "title": "编辑渠道",
+        "data": {
+          "channel_name": "渠道名称",
+          "channel_id": "渠道ID",
+          "channel_type": "渠道类型",
+          "enabled": "启用",
+          "add_to_carousel": "加入轮播队列"
+        }
+      },
+      "edit_channel_config": {
+        "title": "渠道参数",
+        "data": {
+          "resource": "Webhook密钥",
+          "secret": "加签密钥",
+          "url": "请求地址",
+          "method": "请求方法",
+          "command": "Shell命令",
+          "server": "SMTP服务器",
+          "port": "端口",
+          "timeout": "超时(秒)",
+          "sender": "发件人",
+          "encryption": "加密方式",
+          "username": "用户名",
+          "password": "密码",
+          "recipient": "收件人",
+          "sender_name": "发件人名称",
+          "target": "目标实体"
+        }
+      },
+      "remove_channel": {
+        "title": "删除渠道",
+        "data": {
+          "channel": "选择渠道"
+        }
+      },
+      "remove_message": {
+        "title": "删除轮播消息",
+        "data": {
+          "message": "选择消息"
+        }
+      }
+    },
+    "abort": {
+      "no_channels": "尚未配置任何渠道",
+      "no_messages": "轮播队列为空"
+    },
+    "error": {
+      "invalid_channel_id": "渠道 ID 仅允许小写字母、数字、下划线",
+      "already_channel": "该渠道 ID 已存在"
+    }
+  },
+  "services": {
+    "send": {
+      "name": "发送通知",
+      "description": "向指定渠道发送通知，可选加入轮播"
+    },
+    "carousel": {
+      "name": "加入轮播",
+      "description": "仅将消息加入轮播队列"
+    },
+    "clear": {
+      "name": "清空轮播",
+      "description": "清空消息轮播队列"
+    },
+    "remove": {
+      "name": "删除轮播消息",
+      "description": "按索引删除一条轮播消息"
+    }
+  },
+  "device_automation": {
+    "action_type": {
+      "send": "发送通知"
+    }
+  }
+}

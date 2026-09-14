@@ -1,0 +1,3 @@
+scan:
+  name: Scan library
+  description: Rescan the local music folder.

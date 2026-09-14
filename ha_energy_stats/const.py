@@ -1,0 +1,62 @@
+from homeassistant.const import Platform
+
+DOMAIN = "ha_energy_stats"
+
+PLATFORMS = [Platform.SENSOR]
+
+CONF_ENERGY_SENSOR = "energy_sensor"
+CONF_PEAK_START = "peak_start"
+CONF_PEAK_END = "peak_end"
+CONF_BILLING_MODE = "billing_mode"
+CONF_TIER1 = "tier1"
+CONF_TIER2 = "tier2"
+CONF_PEAK_RATE_1 = "peak_rate_1"
+CONF_PEAK_RATE_2 = "peak_rate_2"
+CONF_PEAK_RATE_3 = "peak_rate_3"
+CONF_VALLEY_RATE_1 = "valley_rate_1"
+CONF_VALLEY_RATE_2 = "valley_rate_2"
+CONF_VALLEY_RATE_3 = "valley_rate_3"
+CONF_FLAT_RATE_1 = "flat_rate_1"
+CONF_FLAT_RATE_2 = "flat_rate_2"
+CONF_FLAT_RATE_3 = "flat_rate_3"
+CONF_DAILY_RESET = "daily_reset"
+CONF_DAILY_EXTRA_MIN = "daily_extra_min"
+CONF_DAILY_EXTRA_MAX = "daily_extra_max"
+CONF_MONTHLY_RESET_DAY = "monthly_reset_day"
+CONF_ENERGY_NOTIFY = "energy_notify"
+CONF_NOTIFY = "notify"
+CONF_DAILY_COST_THRESHOLD = "daily_cost_threshold"
+CONF_INIT_MONTHLY_PEAK = "init_monthly_peak"
+CONF_INIT_MONTHLY_VALLEY = "init_monthly_valley"
+CONF_INIT_MONTHLY_PEAK_COST = "init_monthly_peak_cost"
+CONF_INIT_MONTHLY_VALLEY_COST = "init_monthly_valley_cost"
+CONF_INIT_YEARLY_PEAK = "init_yearly_peak"
+CONF_INIT_YEARLY_VALLEY = "init_yearly_valley"
+CONF_INIT_YEARLY_PEAK_COST = "init_yearly_peak_cost"
+CONF_INIT_YEARLY_VALLEY_COST = "init_yearly_valley_cost"
+
+MODE_TOU = "tou"
+MODE_FLAT = "flat"
+
+DEFAULT_PEAK_START = "08:00:00"
+DEFAULT_PEAK_END = "22:00:00"
+DEFAULT_TIER1 = 2760.0
+DEFAULT_TIER2 = 4800.0
+DEFAULT_PEAK_RATE_1 = 0.568
+DEFAULT_PEAK_RATE_2 = 0.618
+DEFAULT_PEAK_RATE_3 = 0.868
+DEFAULT_VALLEY_RATE_1 = 0.288
+DEFAULT_VALLEY_RATE_2 = 0.338
+DEFAULT_VALLEY_RATE_3 = 0.588
+DEFAULT_FLAT_RATE_1 = 0.538
+DEFAULT_FLAT_RATE_2 = 0.588
+DEFAULT_FLAT_RATE_3 = 0.838
+DEFAULT_BILLING_MODE = MODE_TOU
+DEFAULT_DAILY_RESET = "00:00:00"
+DEFAULT_DAILY_EXTRA_MIN = 0.0
+DEFAULT_DAILY_EXTRA_MAX = 0.0
+DEFAULT_MONTHLY_RESET_DAY = 1
+DEFAULT_ENERGY_NOTIFY = False
+DEFAULT_DAILY_COST_THRESHOLD = 5.0
+
+STORAGE_VERSION = 1

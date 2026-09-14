@@ -1,0 +1,106 @@
+update:
+  name: Update
+  description: Update Xiaomi Cloud device locations.
+  fields:
+    account:
+      name: Account
+      description: Xiaomi account username.
+      example: user@example.com
+      selector:
+        text:
+play_sound:
+  name: Play sound
+  description: Play a sound on the device.
+  fields:
+    account:
+      name: Account
+      description: Xiaomi account username.
+      required: true
+      example: user@example.com
+      selector:
+        text:
+    imei:
+      name: IMEI
+      description: Device IMEI.
+      selector:
+        text:
+    device_name:
+      name: Device name
+      description: Device name or slug.
+      selector:
+        text:
+find_device:
+  name: Find device
+  description: Find the device and update its location.
+  fields:
+    account:
+      name: Account
+      description: Xiaomi account username.
+      required: true
+      example: user@example.com
+      selector:
+        text:
+    imei:
+      name: IMEI
+      description: Device IMEI.
+      selector:
+        text:
+    device_name:
+      name: Device name
+      description: Device name or slug.
+      selector:
+        text:
+lost_device:
+  name: Lost mode
+  description: Enable lost mode on the device.
+  fields:
+    account:
+      name: Account
+      description: Xiaomi account username.
+      required: true
+      example: user@example.com
+      selector:
+        text:
+    imei:
+      name: IMEI
+      description: Device IMEI.
+      selector:
+        text:
+    device_name:
+      name: Device name
+      description: Device name or slug.
+      selector:
+        text:
+    phone:
+      name: Phone
+      description: Contact phone number.
+      selector:
+        text:
+    message:
+      name: Message
+      description: Lock screen message.
+      selector:
+        text:
+    onlinenotify:
+      name: Online notify
+      description: Send SMS when the device is located.
+      selector:
+        boolean:
+clipboard:
+  name: Clipboard
+  description: Send text to the cloud clipboard.
+  fields:
+    account:
+      name: Account
+      description: Xiaomi account username.
+      required: true
+      example: user@example.com
+      selector:
+        text:
+    text:
+      name: Text
+      description: Clipboard text.
+      required: true
+      example: Cloud clipboard
+      selector:
+        text:

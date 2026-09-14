@@ -1,0 +1,13 @@
+{
+  "domain": "ha_msg_notify",
+  "name": "通知管理",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": ["notify"],
+  "documentation": "https://github.com/hosiang/ha_msg_notify",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/hosiang/ha_msg_notify/issues",
+  "requirements": [],
+  "version": "1.0.1",
+  "integration_type": "hub"
+}

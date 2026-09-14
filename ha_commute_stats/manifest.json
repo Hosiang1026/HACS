@@ -1,0 +1,12 @@
+{
+  "domain": "ha_commute_stats",
+  "name": "通勤统计",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/hosiang/ha_commute_stats",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/hosiang/ha_commute_stats/issues",
+  "requirements": [],
+  "version": "1.1.0"
+}

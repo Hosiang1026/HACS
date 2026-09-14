@@ -1,0 +1,141 @@
+{
+  "title": "用电统计",
+  "config": {
+    "step": {
+      "user": {
+        "title": "电表与时段",
+        "data": {
+          "name": "名称",
+          "energy_sensor": "电量实体",
+          "peak_start": "高峰开始",
+          "peak_end": "高峰结束",
+          "daily_reset": "每日结算",
+          "daily_extra_min": "每日附加下限",
+          "daily_extra_max": "每日附加上限",
+          "monthly_reset_day": "每月结算日"
+        }
+      },
+      "mode": {
+        "title": "计电模式",
+        "data": {
+          "billing_mode": "计电模式"
+        }
+      },
+      "rates": {
+        "title": "阶梯电价",
+        "data": {
+          "tier1": "一档上限",
+          "tier2": "二档上限",
+          "peak_rate_1": "一档峰电价",
+          "peak_rate_2": "二档峰电价",
+          "peak_rate_3": "三档峰电价",
+          "valley_rate_1": "一档谷电价",
+          "valley_rate_2": "二档谷电价",
+          "valley_rate_3": "三档谷电价",
+          "flat_rate_1": "一档电价",
+          "flat_rate_2": "二档电价",
+          "flat_rate_3": "三档电价"
+        }
+      },
+      "notify": {
+        "title": "电费通知",
+        "data": {
+          "energy_notify": "启用通知",
+          "notify": "通知动作",
+          "daily_cost_threshold": "日电费通知阈值"
+        }
+      },
+      "init_values": {
+        "title": "初始累计",
+        "description": "可填入现有本月/本年累计，没有则保持 0",
+        "data": {
+          "init_monthly_peak": "本月高峰电量",
+          "init_monthly_valley": "本月低谷电量",
+          "init_monthly_peak_cost": "本月高峰电费",
+          "init_monthly_valley_cost": "本月低谷电费",
+          "init_yearly_peak": "本年高峰电量",
+          "init_yearly_valley": "本年低谷电量",
+          "init_yearly_peak_cost": "本年高峰电费",
+          "init_yearly_valley_cost": "本年低谷电费"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "该电量实体已配置"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "用电统计选项",
+        "data": {
+          "energy_sensor": "电量实体",
+          "peak_start": "高峰开始",
+          "peak_end": "高峰结束",
+          "daily_reset": "每日结算",
+          "daily_extra_min": "每日附加下限",
+          "daily_extra_max": "每日附加上限",
+          "monthly_reset_day": "每月结算日",
+          "billing_mode": "计电模式",
+          "tier1": "一档上限",
+          "tier2": "二档上限",
+          "peak_rate_1": "一档峰电价",
+          "peak_rate_2": "二档峰电价",
+          "peak_rate_3": "三档峰电价",
+          "valley_rate_1": "一档谷电价",
+          "valley_rate_2": "二档谷电价",
+          "valley_rate_3": "三档谷电价",
+          "flat_rate_1": "一档电价",
+          "flat_rate_2": "二档电价",
+          "flat_rate_3": "三档电价",
+          "energy_notify": "启用通知",
+          "notify": "通知动作",
+          "daily_cost_threshold": "日电费通知阈值"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "daily_peak_energy": { "name": "每日高峰电量" },
+      "daily_valley_energy": { "name": "每日低谷电量" },
+      "daily_energy": { "name": "今日电量" },
+      "daily_peak_cost": { "name": "今日高峰电费" },
+      "daily_valley_cost": { "name": "今日低谷电费" },
+      "daily_cost": { "name": "今日电费" },
+      "monthly_peak_energy": { "name": "本月高峰电量" },
+      "monthly_valley_energy": { "name": "本月低谷电量" },
+      "monthly_energy": { "name": "本月电量" },
+      "monthly_peak_cost": { "name": "本月高峰电费" },
+      "monthly_valley_cost": { "name": "本月低谷电费" },
+      "monthly_cost": { "name": "本月电费" },
+      "yearly_peak_energy": { "name": "本年高峰电量" },
+      "yearly_valley_energy": { "name": "本年低谷电量" },
+      "yearly_energy": { "name": "本年电量" },
+      "yearly_peak_cost": { "name": "本年高峰电费" },
+      "yearly_valley_cost": { "name": "本年低谷电费" },
+      "yearly_cost": { "name": "本年电费" },
+      "current_tier": { "name": "当前阶梯" },
+      "peak_rate": { "name": "实时峰电价" },
+      "valley_rate": { "name": "实时谷电价" },
+      "realtime_rate": { "name": "实时电价" },
+      "daily_history": { "name": "每日历史" },
+      "monthly_history": { "name": "本年历史月份" },
+      "yearly_history": { "name": "历史年份" }
+    }
+  },
+  "selector": {
+    "billing_mode": {
+      "options": {
+        "tou": "峰谷电计电",
+        "flat": "统一单价"
+      }
+    }
+  },
+  "common": {
+    "daily_title": "今日电费通知",
+    "monthly_title": "本月电费通知",
+    "yearly_title": "本年电费通知",
+    "energy_message": "高峰电量：{peak}kWh\n低谷电量：{valley}kWh\n总计电量：{energy}kWh\n应付电费：{cost}¥\n当前时间：{now}"
+  }
+}

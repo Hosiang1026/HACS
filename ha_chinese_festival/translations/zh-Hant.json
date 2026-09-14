@@ -1,0 +1,334 @@
+{
+  "title": "中國節日",
+  "selector": {
+    "item_kind": {
+      "options": {
+        "license": "證件",
+        "birthday": "生日",
+        "anniversary": "紀念日",
+        "legal": "法定節假日"
+      }
+    },
+    "anniversary_type": {
+      "options": {
+        "0": "累計周年(陽曆)",
+        "1": "倒計周年(陽曆)",
+        "2": "倒計周年(陰曆)"
+      }
+    },
+    "birthday_type": {
+      "options": {
+        "0": "農曆",
+        "1": "陽曆"
+      }
+    },
+    "freeway": {
+      "options": {
+        "0": "收費",
+        "1": "免費"
+      }
+    },
+    "language": {
+      "options": {
+        "zh-Hans": "简体中文",
+        "zh-Hant": "繁體中文"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "chinese_festival": {
+        "name": "中國節日"
+      },
+      "license_expiry": {
+        "name": "證件到期"
+      },
+      "day_type": {
+        "name": "今日類型",
+        "state": {
+          "workday": "工作日",
+          "holiday": "節假日",
+          "weekend": "週末",
+          "rest": "休息日",
+          "repair": "補班"
+        }
+      },
+      "solar_date": {
+        "name": "陽曆"
+      },
+      "weekday": {
+        "name": "星期"
+      },
+      "astro": {
+        "name": "星座"
+      },
+      "lunar_date": {
+        "name": "農曆"
+      },
+      "year_day": {
+        "name": "今年第幾天"
+      },
+      "festival_count": {
+        "name": "節日數量"
+      },
+      "license_count": {
+        "name": "證件數量"
+      },
+      "birthday_count": {
+        "name": "生日數量"
+      },
+      "anniversary_count": {
+        "name": "紀念日數量"
+      },
+      "love_days": {
+        "name": "戀愛天數"
+      },
+      "holiday_plan": {
+        "name": "假期規劃"
+      },
+      "ai_fortune": {
+        "name": "AI運勢",
+        "state": {
+          "disabled": "未啓用",
+          "empty": "暫無"
+        }
+      },
+      "next_solar": {
+        "name": "下一陽曆節日"
+      },
+      "next_lunar": {
+        "name": "下一農曆節日"
+      },
+      "next_term": {
+        "name": "下一節氣"
+      },
+      "next_special": {
+        "name": "下一特殊節日"
+      },
+      "next_intl": {
+        "name": "下一國際日"
+      },
+      "next_seasonal": {
+        "name": "下一三伏四九梅雨"
+      },
+      "next_legal": {
+        "name": "下一法定假日"
+      },
+      "next_birthday": {
+        "name": "下一生日"
+      },
+      "next_anniversary": {
+        "name": "下一紀念日"
+      },
+      "suit": {
+        "name": "宜"
+      },
+      "avoid": {
+        "name": "忌"
+      },
+      "eight_char": {
+        "name": "八字"
+      },
+      "hour": {
+        "name": "時辰"
+      },
+      "clash": {
+        "name": "衝煞"
+      },
+      "moon_phase": {
+        "name": "月相"
+      },
+      "solar_term": {
+        "name": "節氣"
+      },
+      "taboo": {
+        "name": "彭祖百忌"
+      },
+      "good_spirit": {
+        "name": "吉神"
+      },
+      "bad_spirit": {
+        "name": "兇煞"
+      },
+      "fetus": {
+        "name": "胎神"
+      },
+      "tone": {
+        "name": "納音"
+      },
+      "triad": {
+        "name": "三合"
+      },
+      "hexad": {
+        "name": "六合"
+      },
+      "grade": {
+        "name": "宜忌等第"
+      },
+      "zodiac_sign": {
+        "name": "黃曆星座"
+      },
+      "season": {
+        "name": "季節"
+      }
+    },
+    "binary_sensor": {
+      "is_holiday": {
+        "name": "節假日"
+      },
+      "is_repair": {
+        "name": "補班日"
+      }
+    },
+    "date": {
+      "chinese_festival_tap": {
+        "name": "日曆點選"
+      }
+    }
+  },
+  "config": {
+    "step": {
+      "user": {
+        "title": "中國節日",
+        "data": {
+          "name": "名稱",
+          "notify_calendar": "日曆通知",
+          "notify_calendar_time": "日曆通知時間",
+          "notify_festival": "節日通知",
+          "notify_festival_time": "節日通知時間",
+          "notify_memorial": "生日/紀念日通知",
+          "notify_memorial_time": "生日/紀念日通知時間",
+          "notify_license": "證件到期通知",
+          "notify_license_time": "證件到期通知時間",
+          "notify": "通知動作",
+          "near_festival_days": "節日臨近天數",
+          "near_birthday_days": "生日臨近天數",
+          "near_anniversary_days": "紀念日臨近天數",
+          "near_license_days": "證件臨期天數",
+          "holiday_auto": "自動假期數據",
+          "language": "語言切換",
+          "ai_enabled": "啓用AI運勢",
+          "ai_api_url": "AI接口地址",
+          "ai_api_key": "AI密鑰",
+          "ai_model": "AI模型",
+          "notify_rules_enabled": "高級通知",
+          "notify_rules": "通知規則(YAML)",
+          "intent_enabled": "啓用語音助手"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "已配置"
+    },
+    "error": {
+      "invalid_yaml": "YAML格式無效",
+      "invalid_date": "日期格式無效"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "menu_options": {
+          "global": "全局配置",
+          "add_item": "添加",
+          "edit_item": "編輯",
+          "remove_item": "刪除"
+        }
+      },
+      "global": {
+        "title": "全局配置",
+        "data": {
+          "notify_calendar": "日曆通知",
+          "notify_calendar_time": "日曆通知時間",
+          "notify_festival": "節日通知",
+          "notify_festival_time": "節日通知時間",
+          "notify_memorial": "生日/紀念日通知",
+          "notify_memorial_time": "生日/紀念日通知時間",
+          "notify_license": "證件到期通知",
+          "notify_license_time": "證件到期通知時間",
+          "notify": "通知動作",
+          "near_festival_days": "節日臨近天數",
+          "near_birthday_days": "生日臨近天數",
+          "near_anniversary_days": "紀念日臨近天數",
+          "near_license_days": "證件臨期天數",
+          "holiday_auto": "自動假期數據",
+          "language": "語言切換",
+          "ai_enabled": "啓用AI運勢",
+          "ai_api_url": "AI接口地址",
+          "ai_api_key": "AI密鑰",
+          "ai_model": "AI模型",
+          "notify_rules_enabled": "高級通知",
+          "notify_rules": "通知規則(YAML)",
+          "intent_enabled": "啓用語音助手"
+        }
+      },
+      "add_item": {
+        "title": "選擇類型",
+        "data": {
+          "item_kind": "類型"
+        }
+      },
+      "add_item_form": {
+        "title": "添加項目",
+        "data": {
+          "name": "名稱",
+          "date": "日期",
+          "type": "類型",
+          "freeway": "高速免費",
+          "repair": "補班日期",
+          "holiday": "放假日期"
+        }
+      },
+      "edit_item": {
+        "title": "選擇項目",
+        "data": {
+          "item": "項目"
+        }
+      },
+      "edit_item_form": {
+        "title": "編輯項目",
+        "data": {
+          "name": "名稱",
+          "date": "日期",
+          "type": "類型",
+          "freeway": "高速免費",
+          "repair": "補班日期",
+          "holiday": "放假日期"
+        }
+      },
+      "remove_item": {
+        "title": "刪除",
+        "data": {
+          "item": "項目"
+        }
+      }
+    },
+    "error": {
+      "invalid_date": "日期格式無效",
+      "invalid_yaml": "YAML格式無效"
+    },
+    "abort": {
+      "no_items": "暫無項目"
+    }
+  },
+  "services": {
+    "get_overview": {
+      "name": "獲取概覽",
+      "description": "返回今日節日與黃曆摘要"
+    },
+    "date_control": {
+      "name": "日期控制",
+      "description": "控制日曆點選日期",
+      "fields": {
+        "action": {
+          "name": "操作",
+          "description": "today / previous_day / next_day / select_date"
+        },
+        "date": {
+          "name": "日期",
+          "description": "僅 select_date 時使用"
+        }
+      }
+    }
+  }
+}

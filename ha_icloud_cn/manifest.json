@@ -1,0 +1,20 @@
+{
+  "domain": "ha_icloud_cn",
+  "name": "ha_icloud_cn",
+  "config_flow": true,
+  "version": "2.0.0",
+  "documentation": "https://github.com/plutosherry/ha_icloud_cn",
+  "issue_tracker": "https://github.com/louisslee/icloud888/issues",
+  "dependencies":[],
+  "requirements": [
+    "certifi>=2024.12.14",
+    "fido2>=2.0.0",
+    "keyring>=25.6.0",
+    "keyrings.alt>=5.0.2",
+    "requests>=2.31.0",
+    "srp>=1.0.21",
+    "tzlocal==5.3.1"
+  ],
+  "codeowners": ["@louisse"],
+  "iot_class": "cloud_polling"
+}

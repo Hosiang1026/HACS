@@ -1,0 +1,30 @@
+get_overview:
+  name: "获取概览"
+  description: "返回今日节日与黄历摘要"
+  fields: {}
+
+date_control:
+  name: "日期控制"
+  description: "控制日历点选日期"
+  fields:
+    action:
+      name: "操作"
+      description: "today / previous_day / next_day / select_date"
+      required: true
+      selector:
+        select:
+          options:
+            - label: "今天"
+              value: "today"
+            - label: "前一天"
+              value: "previous_day"
+            - label: "下一天"
+              value: "next_day"
+            - label: "选择日期"
+              value: "select_date"
+    date:
+      name: "日期"
+      description: "仅 select_date 时使用"
+      required: false
+      selector:
+        date: {}

@@ -1,0 +1,141 @@
+{
+  "title": "Energy Stats",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Meter and schedule",
+        "data": {
+          "name": "Name",
+          "energy_sensor": "Energy sensor",
+          "peak_start": "Peak start",
+          "peak_end": "Peak end",
+          "daily_reset": "Daily settlement",
+          "daily_extra_min": "Daily extra min",
+          "daily_extra_max": "Daily extra max",
+          "monthly_reset_day": "Monthly settlement day"
+        }
+      },
+      "mode": {
+        "title": "Billing mode",
+        "data": {
+          "billing_mode": "Billing mode"
+        }
+      },
+      "rates": {
+        "title": "Tiered rates",
+        "data": {
+          "tier1": "Tier 1 limit",
+          "tier2": "Tier 2 limit",
+          "peak_rate_1": "Tier 1 peak rate",
+          "peak_rate_2": "Tier 2 peak rate",
+          "peak_rate_3": "Tier 3 peak rate",
+          "valley_rate_1": "Tier 1 valley rate",
+          "valley_rate_2": "Tier 2 valley rate",
+          "valley_rate_3": "Tier 3 valley rate",
+          "flat_rate_1": "Tier 1 rate",
+          "flat_rate_2": "Tier 2 rate",
+          "flat_rate_3": "Tier 3 rate"
+        }
+      },
+      "notify": {
+        "title": "Cost notifications",
+        "data": {
+          "energy_notify": "Enable notifications",
+          "notify": "Notify action",
+          "daily_cost_threshold": "Daily cost notify threshold"
+        }
+      },
+      "init_values": {
+        "title": "Initial totals",
+        "description": "Optional current month and year totals. Leave at 0 if none.",
+        "data": {
+          "init_monthly_peak": "Month peak energy",
+          "init_monthly_valley": "Month valley energy",
+          "init_monthly_peak_cost": "Month peak cost",
+          "init_monthly_valley_cost": "Month valley cost",
+          "init_yearly_peak": "Year peak energy",
+          "init_yearly_valley": "Year valley energy",
+          "init_yearly_peak_cost": "Year peak cost",
+          "init_yearly_valley_cost": "Year valley cost"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "This energy sensor is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Energy stats options",
+        "data": {
+          "energy_sensor": "Energy sensor",
+          "peak_start": "Peak start",
+          "peak_end": "Peak end",
+          "daily_reset": "Daily settlement",
+          "daily_extra_min": "Daily extra min",
+          "daily_extra_max": "Daily extra max",
+          "monthly_reset_day": "Monthly settlement day",
+          "billing_mode": "Billing mode",
+          "tier1": "Tier 1 limit",
+          "tier2": "Tier 2 limit",
+          "peak_rate_1": "Tier 1 peak rate",
+          "peak_rate_2": "Tier 2 peak rate",
+          "peak_rate_3": "Tier 3 peak rate",
+          "valley_rate_1": "Tier 1 valley rate",
+          "valley_rate_2": "Tier 2 valley rate",
+          "valley_rate_3": "Tier 3 valley rate",
+          "flat_rate_1": "Tier 1 rate",
+          "flat_rate_2": "Tier 2 rate",
+          "flat_rate_3": "Tier 3 rate",
+          "energy_notify": "Enable notifications",
+          "notify": "Notify action",
+          "daily_cost_threshold": "Daily cost notify threshold"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "daily_peak_energy": { "name": "Daily peak energy" },
+      "daily_valley_energy": { "name": "Daily valley energy" },
+      "daily_energy": { "name": "Daily energy" },
+      "daily_peak_cost": { "name": "Daily peak cost" },
+      "daily_valley_cost": { "name": "Daily valley cost" },
+      "daily_cost": { "name": "Daily cost" },
+      "monthly_peak_energy": { "name": "Monthly peak energy" },
+      "monthly_valley_energy": { "name": "Monthly valley energy" },
+      "monthly_energy": { "name": "Monthly energy" },
+      "monthly_peak_cost": { "name": "Monthly peak cost" },
+      "monthly_valley_cost": { "name": "Monthly valley cost" },
+      "monthly_cost": { "name": "Monthly cost" },
+      "yearly_peak_energy": { "name": "Yearly peak energy" },
+      "yearly_valley_energy": { "name": "Yearly valley energy" },
+      "yearly_energy": { "name": "Yearly energy" },
+      "yearly_peak_cost": { "name": "Yearly peak cost" },
+      "yearly_valley_cost": { "name": "Yearly valley cost" },
+      "yearly_cost": { "name": "Yearly cost" },
+      "current_tier": { "name": "Current tier" },
+      "peak_rate": { "name": "Peak rate" },
+      "valley_rate": { "name": "Valley rate" },
+      "realtime_rate": { "name": "Realtime rate" },
+      "daily_history": { "name": "Daily history" },
+      "monthly_history": { "name": "Yearly monthly history" },
+      "yearly_history": { "name": "Yearly history" }
+    }
+  },
+  "selector": {
+    "billing_mode": {
+      "options": {
+        "tou": "Peak / valley",
+        "flat": "Flat rate"
+      }
+    }
+  },
+  "common": {
+    "daily_title": "Daily energy cost",
+    "monthly_title": "Monthly energy cost",
+    "yearly_title": "Yearly energy cost",
+    "energy_message": "Peak: {peak} kWh\nValley: {valley} kWh\nTotal: {energy} kWh\nCost: {cost} CNY\nTime: {now}"
+  }
+}

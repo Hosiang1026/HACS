@@ -1,0 +1,486 @@
+{
+  "title": "Commute Stats",
+  "entity": {
+    "sensor": {
+      "home_count": {
+        "name": "People at home"
+      },
+      "comp_count": {
+        "name": "People at work"
+      },
+      "waidi_count": {
+        "name": "People out of town"
+      },
+      "out_count": {
+        "name": "People out"
+      },
+      "home_duration": {
+        "name": "Time at home"
+      },
+      "activity": {
+        "name": "Activity",
+        "state": {
+          "home": "Home",
+          "company": "Work",
+          "out": "Out",
+          "away": "Away"
+        }
+      },
+      "work_duration": {
+        "name": "Work duration"
+      },
+      "work_time": {
+        "name": "Regular hours"
+      },
+      "over_time": {
+        "name": "Overtime"
+      },
+      "work_state": {
+        "name": "Work status",
+        "state": {
+          "holiday": "On holiday",
+          "rest": "Resting",
+          "off_work": "Off work",
+          "lunch": "On lunch break",
+          "overtime": "Overtime",
+          "working": "Working"
+        }
+      }
+    },
+    "switch": {
+      "away": {
+        "name": "Away"
+      },
+      "work": {
+        "name": "At work"
+      }
+    },
+    "number": {
+      "comp_time": {
+        "name": "Comp time"
+      },
+      "month_salary": {
+        "name": "Monthly salary",
+        "unit_of_measurement": "CNY"
+      }
+    },
+    "datetime": {
+      "work_start_time": {
+        "name": "Clock-in time"
+      },
+      "work_end_time": {
+        "name": "Clock-out time"
+      }
+    }
+  },
+  "exceptions": {
+    "default_name": {
+      "message": "Commute Stats"
+    },
+    "person": {
+      "message": "Person"
+    },
+    "no_commute": {
+      "message": "No commute info"
+    },
+    "zero_minutes": {
+      "message": "0 min"
+    },
+    "hours_minutes": {
+      "message": "{hours}h {minutes}m"
+    },
+    "days_hours_minutes": {
+      "message": "{days}d {hours}h {minutes}m"
+    },
+    "minutes": {
+      "message": "{minutes} min"
+    },
+    "driving": {
+      "message": "Drive"
+    },
+    "bicycling": {
+      "message": "Bike"
+    },
+    "commute_home": {
+      "message": "Home distance: {km} km\nHome time: {time}"
+    },
+    "commute_home_mode": {
+      "message": "{mode} home distance: {km} km\nHome time: {time}"
+    },
+    "arrive_title": {
+      "message": "{name} arrived home"
+    },
+    "leave_title": {
+      "message": "{name} left home"
+    },
+    "arrive_message": {
+      "message": "Location: {addr}\nTime: {now}\n"
+    },
+    "leave_message": {
+      "message": "{commute}Location: {addr}\nTime: {now}\n"
+    },
+    "station_enter_title": {
+      "message": "{name} entered station"
+    },
+    "station_leave_title": {
+      "message": "{name} left station"
+    },
+    "station_message": {
+      "message": "Station: {station}\n{commute}Location: {addr}\nTime: {now}\n"
+    },
+    "announce_join": {
+      "message": "{title}. {commute}"
+    }
+  },
+  "config": {
+    "step": {
+      "user": {
+        "title": "Global settings",
+        "data": {
+          "name": "Name",
+          "total_people": "Total people",
+          "indoor_sensor": "Indoor occupancy sensor",
+          "notify": "Notify action",
+          "announce": "Announce player",
+          "amap_key": "Amap key",
+          "holiday_sensor": "Day type"
+        }
+      },
+      "person": {
+        "title": "Add person",
+        "data": {
+          "person_name": "Name",
+          "person": "Person",
+          "activity_sensor": "Activity entity",
+          "addr_sensor": "Location",
+          "commute_sensor": "Commute info",
+          "commute_distance": "Commute distance",
+          "commute_time": "Commute time"
+        }
+      },
+      "home_rules": {
+        "title": "Home settings",
+        "data": {
+          "home_zones": "Home zones",
+          "lat_row": "Latitude",
+          "area_lat_min": "Min",
+          "area_lat_max": "Max",
+          "lon_row": "Longitude",
+          "area_lon_min": "Min",
+          "area_lon_max": "Max",
+          "notify_arrive": "Arrive notify",
+          "notify_leave": "Leave notify",
+          "arrive_row": "Arrive window",
+          "arrive_start": "Start",
+          "arrive_end": "End",
+          "leave_row": "Leave window",
+          "leave_start": "Start",
+          "leave_end": "End",
+          "notify_station_enter": "Station enter notify",
+          "station_enter_zones": "Station enter zones",
+          "notify_station_leave": "Station leave notify",
+          "station_leave_zones": "Station leave zones",
+          "reset_home_duration": "Daily reset home duration"
+        },
+        "sections": {
+          "city_area": {
+            "name": "Local city coordinates",
+            "data": {
+              "lat_row": "Latitude",
+              "area_lat_min": "Min",
+              "area_lat_max": "Max",
+              "lon_row": "Longitude",
+              "area_lon_min": "Min",
+              "area_lon_max": "Max"
+            }
+          }
+        }
+      },
+      "work_rules": {
+        "title": "Hours and pay",
+        "data": {
+          "work_zones": "Work zones",
+          "standard_hours": "Standard hours",
+          "lunch_start": "Lunch start",
+          "lunch_end": "Lunch end",
+          "overtime_start": "Overtime start",
+          "clock_in_start": "Clock-in start",
+          "clock_in_end": "Clock-in end",
+          "clock_out_start": "Clock-out start",
+          "clock_out_end": "Clock-out end",
+          "base_salary": "Daily salary",
+          "over_hourly_wage": "Overtime hourly wage",
+          "holiday_hourly_wage": "Holiday hourly wage",
+          "comp_threshold": "Comp time threshold",
+          "comp_deduct": "Comp time deduction",
+          "daily_reset": "Daily reset",
+          "monthly_reset_day": "Monthly reset day",
+          "work_enabled": "Enable work tracking",
+          "work_notify": "Enable notifications"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Commute Stats is already configured"
+    },
+    "error": {
+      "already_person": "This person is already added"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Commute Stats",
+        "menu_options": {
+          "global": "Global settings",
+          "household": "Home settings",
+          "edit_work": "Company settings",
+          "add_person": "Add person",
+          "edit_person": "Edit person",
+          "remove_person": "Remove person"
+        }
+      },
+      "global": {
+        "title": "Global settings",
+        "data": {
+          "total_people": "Total people",
+          "indoor_sensor": "Indoor occupancy sensor",
+          "notify": "Notify action",
+          "announce": "Announce player",
+          "amap_key": "Amap key",
+          "holiday_sensor": "Day type"
+        }
+      },
+      "household": {
+        "title": "Home settings",
+        "data": {
+          "person": "Person"
+        }
+      },
+      "household_form": {
+        "title": "Home settings",
+        "data": {
+          "home_zones": "Home zones",
+          "lat_row": "Latitude",
+          "area_lat_min": "Min",
+          "area_lat_max": "Max",
+          "lon_row": "Longitude",
+          "area_lon_min": "Min",
+          "area_lon_max": "Max",
+          "notify_arrive": "Arrive notify",
+          "notify_leave": "Leave notify",
+          "arrive_row": "Arrive window",
+          "arrive_start": "Start",
+          "arrive_end": "End",
+          "leave_row": "Leave window",
+          "leave_start": "Start",
+          "leave_end": "End",
+          "notify_station_enter": "Station enter notify",
+          "station_enter_zones": "Station enter zones",
+          "notify_station_leave": "Station leave notify",
+          "station_leave_zones": "Station leave zones",
+          "reset_home_duration": "Daily reset home duration"
+        },
+        "sections": {
+          "city_area": {
+            "name": "Local city coordinates",
+            "data": {
+              "lat_row": "Latitude",
+              "area_lat_min": "Min",
+              "area_lat_max": "Max",
+              "lon_row": "Longitude",
+              "area_lon_min": "Min",
+              "area_lon_max": "Max"
+            }
+          }
+        }
+      },
+      "add_person": {
+        "title": "Add person",
+        "data": {
+          "person_name": "Name",
+          "person": "Person",
+          "activity_sensor": "Activity entity",
+          "addr_sensor": "Location",
+          "commute_sensor": "Commute info",
+          "commute_distance": "Commute distance",
+          "commute_time": "Commute time"
+        }
+      },
+      "edit_person": {
+        "title": "Edit person",
+        "data": {
+          "person": "Person"
+        }
+      },
+      "edit_form": {
+        "title": "Edit person",
+        "data": {
+          "person_name": "Name",
+          "person": "Person",
+          "activity_sensor": "Activity entity",
+          "addr_sensor": "Location",
+          "commute_sensor": "Commute info",
+          "commute_distance": "Commute distance",
+          "commute_time": "Commute time"
+        }
+      },
+      "remove_person": {
+        "title": "Remove person",
+        "data": {
+          "person": "Person"
+        }
+      },
+      "add_home_rules": {
+        "title": "Home settings",
+        "data": {
+          "home_zones": "Home zones",
+          "lat_row": "Latitude",
+          "area_lat_min": "Min",
+          "area_lat_max": "Max",
+          "lon_row": "Longitude",
+          "area_lon_min": "Min",
+          "area_lon_max": "Max",
+          "notify_arrive": "Arrive notify",
+          "notify_leave": "Leave notify",
+          "arrive_row": "Arrive window",
+          "arrive_start": "Start",
+          "arrive_end": "End",
+          "leave_row": "Leave window",
+          "leave_start": "Start",
+          "leave_end": "End",
+          "notify_station_enter": "Station enter notify",
+          "station_enter_zones": "Station enter zones",
+          "notify_station_leave": "Station leave notify",
+          "station_leave_zones": "Station leave zones",
+          "reset_home_duration": "Daily reset home duration"
+        },
+        "sections": {
+          "city_area": {
+            "name": "Local city coordinates",
+            "data": {
+              "lat_row": "Latitude",
+              "area_lat_min": "Min",
+              "area_lat_max": "Max",
+              "lon_row": "Longitude",
+              "area_lon_min": "Min",
+              "area_lon_max": "Max"
+            }
+          }
+        }
+      },
+      "add_work_rules": {
+        "title": "Hours and pay",
+        "data": {
+          "work_zones": "Work zones",
+          "standard_hours": "Standard hours",
+          "lunch_start": "Lunch start",
+          "lunch_end": "Lunch end",
+          "overtime_start": "Overtime start",
+          "clock_in_start": "Clock-in start",
+          "clock_in_end": "Clock-in end",
+          "clock_out_start": "Clock-out start",
+          "clock_out_end": "Clock-out end",
+          "base_salary": "Daily salary",
+          "over_hourly_wage": "Overtime hourly wage",
+          "holiday_hourly_wage": "Holiday hourly wage",
+          "comp_threshold": "Comp time threshold",
+          "comp_deduct": "Comp time deduction",
+          "daily_reset": "Daily reset",
+          "monthly_reset_day": "Monthly reset day",
+          "work_enabled": "Enable work tracking",
+          "work_notify": "Enable notifications"
+        }
+      },
+      "edit_work_rules": {
+        "title": "Hours and pay",
+        "data": {
+          "work_zones": "Work zones",
+          "standard_hours": "Standard hours",
+          "lunch_start": "Lunch start",
+          "lunch_end": "Lunch end",
+          "overtime_start": "Overtime start",
+          "clock_in_start": "Clock-in start",
+          "clock_in_end": "Clock-in end",
+          "clock_out_start": "Clock-out start",
+          "clock_out_end": "Clock-out end",
+          "base_salary": "Daily salary",
+          "over_hourly_wage": "Overtime hourly wage",
+          "holiday_hourly_wage": "Holiday hourly wage",
+          "comp_threshold": "Comp time threshold",
+          "comp_deduct": "Comp time deduction",
+          "daily_reset": "Daily reset",
+          "monthly_reset_day": "Monthly reset day",
+          "work_enabled": "Enable work tracking",
+          "work_notify": "Enable notifications"
+        }
+      },
+      "edit_work_form": {
+        "title": "Hours and pay",
+        "data": {
+          "work_zones": "Work zones",
+          "standard_hours": "Standard hours",
+          "lunch_start": "Lunch start",
+          "lunch_end": "Lunch end",
+          "overtime_start": "Overtime start",
+          "clock_in_start": "Clock-in start",
+          "clock_in_end": "Clock-in end",
+          "clock_out_start": "Clock-out start",
+          "clock_out_end": "Clock-out end",
+          "base_salary": "Daily salary",
+          "over_hourly_wage": "Overtime hourly wage",
+          "holiday_hourly_wage": "Holiday hourly wage",
+          "comp_threshold": "Comp time threshold",
+          "comp_deduct": "Comp time deduction",
+          "daily_reset": "Daily reset",
+          "monthly_reset_day": "Monthly reset day",
+          "work_enabled": "Enable work tracking",
+          "work_notify": "Enable notifications"
+        }
+      },
+      "edit_work": {
+        "title": "Company settings",
+        "data": {
+          "person": "Person"
+        }
+      }
+    },
+    "abort": {
+      "no_people": "No people",
+      "no_work_people": "No people with work zones"
+    },
+    "error": {
+      "already_person": "This person is already added"
+    }
+  },
+  "common": {
+    "clock_in_title": "{name} clock-in",
+    "clock_out_title": "{name} clock-out",
+    "unknown": "unknown",
+    "hours_minutes": "{hours}h {minutes}m",
+    "days_hours_minutes": "{days}d {hours}h {minutes}m",
+    "minutes": "{minutes}m",
+    "km_int": "{km} km",
+    "km_float": "{km} km",
+    "clock_in_message": "Distance from home: {dist}\nTravel time: {time}\nLocation: {addr}\nTime: {now}",
+    "clock_out_message": "Overtime: {over_time} h\nComp time: {comp_time} h\nLocation: {addr}\nTime: {now}",
+    "commute": "Home distance: {dist} Travel time: {time}"
+  },
+  "selector": {
+    "hours": {
+      "unit_of_measurement": {
+        "h": "h"
+      }
+    },
+    "cny_day": {
+      "unit_of_measurement": {
+        "CNY/day": "CNY/day"
+      }
+    },
+    "cny_hour": {
+      "unit_of_measurement": {
+        "CNY/h": "CNY/h"
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "domain": "ha_general_info",
+  "name": "综合资讯",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/hosiang/ha_general_info",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/hosiang/ha_general_info/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}

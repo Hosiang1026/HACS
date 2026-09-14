@@ -1,0 +1,13 @@
+{
+  "domain": "ha_chinese_festival",
+  "name": "中国节日",
+  "codeowners": ["@hosiang"],
+  "config_flow": true,
+  "dependencies": ["http", "frontend", "intent"],
+  "documentation": "https://github.com/hosiang/ha_chinese_festival",
+  "integration_type": "service",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/hosiang/ha_chinese_festival/issues",
+  "requirements": ["cnlunar==0.2.4", "zhconv==1.4.3"],
+  "version": "2.0.0"
+}

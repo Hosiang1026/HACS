@@ -1,0 +1,187 @@
+{
+  "title": "Weather Forecast",
+  "entity": {
+    "sensor": {
+      "created_at": { "name": "Created" },
+      "updated_at": { "name": "Updated" },
+      "weather_temp": { "name": "Temperature" },
+      "weather_feels": { "name": "Feels like" },
+      "weather_humidity": { "name": "Humidity" },
+      "weather_aqi": { "name": "AQI" },
+      "weather_wind": { "name": "Wind" },
+      "weather_indices": { "name": "Life indices" },
+      "weather_forecast": { "name": "Forecast summary" }
+    },
+    "binary_sensor": {
+      "weather_alarm": { "name": "Weather alarm" }
+    },
+    "button": {
+      "refresh_weather": { "name": "Refresh weather forecast" }
+    }
+  },
+  "services": {
+    "refresh": {
+      "name": "Refresh",
+      "description": "Refresh weather forecast"
+    }
+  },
+  "selector": {
+    "menu_next": {
+      "options": {
+        "global": "Global notify",
+        "cities": "Manage cities",
+        "module": "Module notify"
+      }
+    },
+    "cities_action": {
+      "options": {
+        "add": "Add city",
+        "edit": "Edit city",
+        "delete": "Delete city",
+        "back": "Back"
+      }
+    },
+    "weather_provider": {
+      "options": {
+        "tianqi": "China Weather",
+        "qweather": "QWeather",
+        "caiyun": "Caiyun"
+      }
+    }
+  },
+  "config": {
+    "step": {
+      "user": {
+        "title": "Weather Forecast",
+        "description": "Configure global notify",
+        "data": {
+          "name": "Name",
+          "notify": "Notify action",
+          "announce": "Announce entity",
+          "notify_enabled": "Enable notify"
+        },
+        "data_description": {
+          "announce": "Entity used for announcements"
+        }
+      },
+      "city": {
+        "title": "Add city",
+        "description": "Search by city name. Peak commute hours poll more often",
+        "data": {
+          "city": "City",
+          "provider": "Provider",
+          "interval": "Peak interval (min)",
+          "api_key": "API Key",
+          "api_host": "API Host",
+          "add_another": "Add another city"
+        },
+        "data_description": {
+          "city": "Search by city or district name",
+          "interval": "Used 07:00–09:00 and 18:00–20:00; about 60 min otherwise",
+          "api_key": "Required by some providers",
+          "api_host": "Custom API host (optional)"
+        }
+      },
+      "pick": {
+        "title": "Select city",
+        "description": "Multiple matches found, please choose one",
+        "data": {
+          "area_id": "City"
+        }
+      }
+    },
+    "error": {
+      "city_not_found": "City not found",
+      "api_key_required": "API Key required"
+    },
+    "abort": {
+      "already_configured": "Already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "menu": {
+        "title": "Options",
+        "description": "Choose what to configure; submit saves immediately",
+        "data": {
+          "next": "Item"
+        }
+      },
+      "global": {
+        "title": "Global notify",
+        "data": {
+          "notify": "Notify action",
+          "announce": "Announce entity",
+          "notify_enabled": "Enable notify"
+        },
+        "data_description": {
+          "notify_enabled": "When off, no notifications are sent"
+        }
+      },
+      "cities": {
+        "title": "Manage cities",
+        "description": "Current cities: {cities}",
+        "data": {
+          "action": "Action"
+        }
+      },
+      "select_city": {
+        "title": "Select city",
+        "data": {
+          "city_index": "City"
+        }
+      },
+      "delete_city": {
+        "title": "Delete city",
+        "description": "Delete \"{city}\"?",
+        "data": {
+          "confirm": "Confirm delete"
+        }
+      },
+      "city_form": {
+        "title": "City settings",
+        "description": "Search by city name. Peak commute hours poll more often",
+        "data": {
+          "city": "City name",
+          "provider": "Provider",
+          "interval": "Peak interval (min)",
+          "forecast_days": "Forecast days",
+          "indices_enabled": "Indices",
+          "api_key": "API Key",
+          "api_host": "API Host"
+        },
+        "data_description": {
+          "city": "e.g. Hangzhou",
+          "interval": "Used 07:00–09:00 and 18:00–20:00; about 60 min otherwise",
+          "api_key": "Required by some providers"
+        }
+      },
+      "module": {
+        "title": "Module notify",
+        "data": {
+          "enabled": "Enabled",
+          "notify_enabled": "Notify",
+          "notify_start": "Notify start",
+          "notify_end": "Notify end",
+          "notify_alarm": "Alarm notify",
+          "notify_rain": "Rain notify"
+        },
+        "data_description": {
+          "notify_alarm": "Notify when weather alarms are active",
+          "notify_rain": "Notify on rain now/forecast with time and amount"
+        }
+      },
+      "pick_options": {
+        "title": "Select city",
+        "description": "Multiple matches found, please choose one",
+        "data": {
+          "area_id": "City"
+        }
+      }
+    },
+    "error": {
+      "city_not_found": "City not found",
+      "api_key_required": "API Key required"
+    }
+  }
+}

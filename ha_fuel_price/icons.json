@@ -1,0 +1,59 @@
+{
+  "entity": {
+    "button": {
+      "manual_update": {
+        "default": "mdi:refresh"
+      }
+    },
+    "sensor": {
+      "created_at": {
+        "default": "mdi:calendar-plus"
+      },
+      "update_time": {
+        "default": "mdi:clock-check-outline"
+      },
+      "trend": {
+        "default": "mdi:trending-up"
+      },
+      "fuel_92": {
+        "default": "mdi:gas-station"
+      },
+      "fuel_95": {
+        "default": "mdi:gas-station"
+      },
+      "fuel_98": {
+        "default": "mdi:gas-station"
+      },
+      "fuel_0": {
+        "default": "mdi:fuel"
+      },
+      "fuel_low_date": {
+        "default": "mdi:calendar-star"
+      },
+      "fuel_92_low": {
+        "default": "mdi:trending-down"
+      },
+      "fuel_95_low": {
+        "default": "mdi:trending-down"
+      },
+      "fuel_98_low": {
+        "default": "mdi:trending-down"
+      },
+      "fuel_0_low": {
+        "default": "mdi:trending-down"
+      },
+      "fuel_92_cost": {
+        "default": "mdi:cash"
+      },
+      "fuel_95_cost": {
+        "default": "mdi:cash"
+      },
+      "fuel_98_cost": {
+        "default": "mdi:cash"
+      },
+      "fuel_0_cost": {
+        "default": "mdi:cash"
+      }
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "通知消息轮播",
+  "filename": "ha-msg-notify-card.js",
+  "content_in_root": true,
+  "homeassistant": "2024.1.0"
+}

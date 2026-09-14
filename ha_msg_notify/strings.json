@@ -1,0 +1,245 @@
+{
+  "title": "Notification Manager",
+  "entity": {
+    "sensor": {
+      "current_message": { "name": "Current message" },
+      "current_source": { "name": "Current source" },
+      "message_time": { "name": "Message time" },
+      "message_count": { "name": "Message count" },
+      "message_queue": { "name": "Message queue" },
+      "enabled_channels": { "name": "Enabled channels" },
+      "disabled_channels": { "name": "Disabled channels" }
+    },
+    "switch": {
+      "carousel_enabled": { "name": "Carousel" }
+    },
+    "number": {
+      "carousel_interval": { "name": "Carousel interval" }
+    },
+    "button": {
+      "test_send": { "name": "Test send" }
+    }
+  },
+  "exceptions": {
+    "default_name": { "message": "Notification Manager" }
+  },
+  "selector": {
+    "channel_type": {
+      "options": {
+        "wework_robot": "WeCom robot",
+        "dingtalk": "DingTalk robot",
+        "feishu": "Feishu robot",
+        "smtp": "Email SMTP",
+        "rest_command": "REST command",
+        "shell_command": "Shell command",
+        "notify": "HA notify service",
+        "announce": "Announce",
+        "display": "Display"
+      }
+    },
+    "encryption": {
+      "options": {
+        "starttls": "STARTTLS",
+        "tls": "TLS/SSL",
+        "none": "None"
+      }
+    },
+    "method": {
+      "options": {
+        "get": "GET",
+        "post": "POST",
+        "put": "PUT",
+        "delete": "DELETE"
+      }
+    },
+    "message_mode": {
+      "options": {
+        "append": "Append",
+        "replace": "Replace"
+      }
+    }
+  },
+  "config": {
+    "step": {
+      "user": {
+        "title": "Carousel",
+        "data": {
+          "name": "Name",
+          "carousel_interval": "Interval (seconds)",
+          "carousel_enabled": "Enable carousel",
+          "max_messages": "Max messages",
+          "message_mode": "Queue mode"
+        }
+      },
+      "channel": {
+        "title": "Add channel",
+        "data": {
+          "channel_name": "Channel name",
+          "channel_id": "Channel ID",
+          "channel_type": "Channel type",
+          "enabled": "Enabled",
+          "add_to_carousel": "Add to carousel"
+        }
+      },
+      "channel_config": {
+        "title": "Channel settings",
+        "data": {
+          "resource": "Webhook key",
+          "secret": "Sign secret",
+          "url": "URL",
+          "method": "Method",
+          "command": "Command",
+          "server": "SMTP server",
+          "port": "Port",
+          "timeout": "Timeout (seconds)",
+          "sender": "Sender",
+          "encryption": "Encryption",
+          "username": "Username",
+          "password": "Password",
+          "recipient": "Recipients",
+          "sender_name": "Sender name",
+          "target": "Target"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Already configured"
+    },
+    "error": {
+      "invalid_channel_id": "Channel ID allows lowercase letters, digits, underscore only",
+      "already_channel": "Channel ID already exists"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Notification Manager",
+        "menu_options": {
+          "carousel": "Carousel settings",
+          "add_channel": "Add channel",
+          "edit_channel": "Edit channel",
+          "remove_channel": "Remove channel",
+          "remove_message": "Remove carousel message"
+        }
+      },
+      "carousel": {
+        "title": "Carousel settings",
+        "data": {
+          "carousel_interval": "Interval (seconds)",
+          "carousel_enabled": "Enable carousel",
+          "max_messages": "Max messages",
+          "message_mode": "Queue mode"
+        }
+      },
+      "add_channel": {
+        "title": "Add channel",
+        "data": {
+          "channel_name": "Channel name",
+          "channel_id": "Channel ID",
+          "channel_type": "Channel type",
+          "enabled": "Enabled",
+          "add_to_carousel": "Add to carousel"
+        }
+      },
+      "add_channel_config": {
+        "title": "Channel settings",
+        "data": {
+          "resource": "Webhook key",
+          "secret": "Sign secret",
+          "url": "URL",
+          "method": "Method",
+          "command": "Command",
+          "server": "SMTP server",
+          "port": "Port",
+          "timeout": "Timeout (seconds)",
+          "sender": "Sender",
+          "encryption": "Encryption",
+          "username": "Username",
+          "password": "Password",
+          "recipient": "Recipients",
+          "sender_name": "Sender name",
+          "target": "Target"
+        }
+      },
+      "edit_channel": {
+        "title": "Edit channel",
+        "data": {
+          "channel": "Channel"
+        }
+      },
+      "edit_form": {
+        "title": "Edit channel",
+        "data": {
+          "channel_name": "Channel name",
+          "channel_id": "Channel ID",
+          "channel_type": "Channel type",
+          "enabled": "Enabled",
+          "add_to_carousel": "Add to carousel"
+        }
+      },
+      "edit_channel_config": {
+        "title": "Channel settings",
+        "data": {
+          "resource": "Webhook key",
+          "secret": "Sign secret",
+          "url": "URL",
+          "method": "Method",
+          "command": "Command",
+          "server": "SMTP server",
+          "port": "Port",
+          "timeout": "Timeout (seconds)",
+          "sender": "Sender",
+          "encryption": "Encryption",
+          "username": "Username",
+          "password": "Password",
+          "recipient": "Recipients",
+          "sender_name": "Sender name",
+          "target": "Target"
+        }
+      },
+      "remove_channel": {
+        "title": "Remove channel",
+        "data": {
+          "channel": "Channel"
+        }
+      },
+      "remove_message": {
+        "title": "Remove carousel message",
+        "data": {
+          "message": "Message"
+        }
+      }
+    },
+    "abort": {
+      "no_channels": "No channels configured",
+      "no_messages": "Carousel queue is empty"
+    },
+    "error": {
+      "invalid_channel_id": "Invalid channel ID",
+      "already_channel": "Channel ID already exists"
+    }
+  },
+  "services": {
+    "send": {
+      "name": "Send notification",
+      "description": "Send to channels, optionally add to carousel"
+    },
+    "carousel": {
+      "name": "Add to carousel",
+      "description": "Add message to carousel queue only"
+    },
+    "clear": {
+      "name": "Clear carousel",
+      "description": "Clear carousel queue"
+    },
+    "remove": {
+      "name": "Remove carousel message",
+      "description": "Remove one carousel message by index"
+    }
+  },
+  "device_automation": {
+    "action_type": {
+      "send": "Send notification"
+    }
+  }
+}

@@ -1,0 +1,406 @@
+{
+  "title": "Smart Scene",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Scene basics",
+        "data": {
+          "name": "Scene name",
+          "tts_devices": "Announce devices"
+        }
+      },
+      "rule": {
+        "title": "Add rule",
+        "sections": {
+          "rule_basic": {
+            "name": "Basics",
+            "data": {
+              "rule_name": "Rule name",
+              "rule_room": "Room",
+              "rule_enabled": "Enabled"
+            }
+          },
+          "trigger": {
+            "name": "Trigger",
+            "data": {
+              "trigger_type": "Trigger type",
+              "weekdays": "Weekdays"
+            }
+          },
+          "trigger_state": {
+            "name": "State change",
+            "data": {
+              "trigger_entity": "Controller entity",
+              "trigger_to": "To state",
+              "trigger_from": "From state"
+            }
+          },
+          "trigger_numeric": {
+            "name": "Numeric above/below",
+            "data": {
+              "trigger_entity": "Controller entity",
+              "numeric_threshold": "Numeric threshold"
+            }
+          },
+          "conditions": {
+            "name": "Conditions",
+            "data": {
+              "condition_logic": "Condition logic",
+              "cond_1_row": "Condition 1",
+              "cond_1_entity": "Entity",
+              "cond_1_state": "State",
+              "cond_2_row": "Condition 2",
+              "cond_2_entity": "Entity",
+              "cond_2_state": "State",
+              "cond_3_row": "Condition 3",
+              "cond_3_entity": "Entity",
+              "cond_3_state": "State",
+              "time_row": "Time window",
+              "time_after": "After",
+              "time_before": "Before"
+            }
+          },
+          "action": {
+            "name": "Action",
+            "data": {
+              "target_entities": "Controlled entities",
+              "target_action": "Action"
+            }
+          },
+          "broadcast": {
+            "name": "Announce",
+            "data": {
+              "broadcast_success": "Enable success announce",
+              "message": "Success announce text",
+              "broadcast_fail": "Enable failure announce",
+              "message_fail": "Failure announce text"
+            }
+          },
+          "timing": {
+            "name": "Timing",
+            "data": {
+              "cooldown": "Cooldown (s)",
+              "delay": "Delay before action (s)",
+              "verify_delay": "State check wait (s)"
+            }
+          },
+          "time_trigger": {
+            "name": "Time trigger",
+            "data": {
+              "trigger_time": "Trigger time"
+            }
+          },
+          "trigger_zone": {
+            "name": "Zone enter/leave",
+            "data": {
+              "trigger_person": "Person entity",
+              "trigger_entity": "Zone entity"
+            }
+          }
+        }
+      },
+      "rule_menu": {
+        "title": "Add another rule?",
+        "menu_options": {
+          "rule": "Add another rule",
+          "finish": "Finish"
+        }
+      },
+      "finish": {
+        "title": "Finish"
+      }
+    },
+    "abort": {
+      "already_configured": "Scene already configured",
+      "no_rules": "No rules",
+      "unknown": "Unknown error"
+    },
+    "error": {
+      "name_required": "Scene name is required",
+      "trigger_entity_required": "Controller entity is required",
+      "trigger_time_required": "Trigger time is required",
+      "trigger_zone_required": "Person entity and zone entity are required"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Scene options",
+        "menu_options": {
+          "settings": "Settings",
+          "add_rule": "Add rule",
+          "edit_rule": "Edit rule",
+          "remove_rule": "Remove rule"
+        }
+      },
+      "settings": {
+        "title": "Settings",
+        "data": {
+          "name": "Scene name",
+          "tts_devices": "Announce devices"
+        }
+      },
+      "add_rule": {
+        "title": "Add rule",
+        "sections": {
+          "rule_basic": {
+            "name": "Basics",
+            "data": {
+              "rule_name": "Rule name",
+              "rule_room": "Room",
+              "rule_enabled": "Enabled"
+            }
+          },
+          "trigger": {
+            "name": "Trigger",
+            "data": {
+              "trigger_type": "Trigger type",
+              "weekdays": "Weekdays"
+            }
+          },
+          "trigger_state": {
+            "name": "State change",
+            "data": {
+              "trigger_entity": "Controller entity",
+              "trigger_to": "To state",
+              "trigger_from": "From state"
+            }
+          },
+          "trigger_numeric": {
+            "name": "Numeric above/below",
+            "data": {
+              "trigger_entity": "Controller entity",
+              "numeric_threshold": "Numeric threshold"
+            }
+          },
+          "conditions": {
+            "name": "Conditions",
+            "data": {
+              "condition_logic": "Condition logic",
+              "cond_1_row": "Condition 1",
+              "cond_1_entity": "Entity",
+              "cond_1_state": "State",
+              "cond_2_row": "Condition 2",
+              "cond_2_entity": "Entity",
+              "cond_2_state": "State",
+              "cond_3_row": "Condition 3",
+              "cond_3_entity": "Entity",
+              "cond_3_state": "State",
+              "time_row": "Time window",
+              "time_after": "After",
+              "time_before": "Before"
+            }
+          },
+          "action": {
+            "name": "Action",
+            "data": {
+              "target_entities": "Controlled entities",
+              "target_action": "Action"
+            }
+          },
+          "broadcast": {
+            "name": "Announce",
+            "data": {
+              "broadcast_success": "Enable success announce",
+              "message": "Success announce text",
+              "broadcast_fail": "Enable failure announce",
+              "message_fail": "Failure announce text"
+            }
+          },
+          "timing": {
+            "name": "Timing",
+            "data": {
+              "cooldown": "Cooldown (s)",
+              "delay": "Delay before action (s)",
+              "verify_delay": "State check wait (s)"
+            }
+          },
+          "time_trigger": {
+            "name": "Time trigger",
+            "data": {
+              "trigger_time": "Trigger time"
+            }
+          },
+          "trigger_zone": {
+            "name": "Zone enter/leave",
+            "data": {
+              "trigger_person": "Person entity",
+              "trigger_entity": "Zone entity"
+            }
+          }
+        }
+      },
+      "edit_rule": {
+        "title": "Select rule",
+        "data": {
+          "rule_id": "Rule"
+        }
+      },
+      "edit_rule_form": {
+        "title": "Edit rule",
+        "sections": {
+          "rule_basic": {
+            "name": "Basics",
+            "data": {
+              "rule_name": "Rule name",
+              "rule_room": "Room",
+              "rule_enabled": "Enabled"
+            }
+          },
+          "trigger": {
+            "name": "Trigger",
+            "data": {
+              "trigger_type": "Trigger type",
+              "weekdays": "Weekdays"
+            }
+          },
+          "trigger_state": {
+            "name": "State change",
+            "data": {
+              "trigger_entity": "Controller entity",
+              "trigger_to": "To state",
+              "trigger_from": "From state"
+            }
+          },
+          "trigger_numeric": {
+            "name": "Numeric above/below",
+            "data": {
+              "trigger_entity": "Controller entity",
+              "numeric_threshold": "Numeric threshold"
+            }
+          },
+          "conditions": {
+            "name": "Conditions",
+            "data": {
+              "condition_logic": "Condition logic",
+              "cond_1_row": "Condition 1",
+              "cond_1_entity": "Entity",
+              "cond_1_state": "State",
+              "cond_2_row": "Condition 2",
+              "cond_2_entity": "Entity",
+              "cond_2_state": "State",
+              "cond_3_row": "Condition 3",
+              "cond_3_entity": "Entity",
+              "cond_3_state": "State",
+              "time_row": "Time window",
+              "time_after": "After",
+              "time_before": "Before"
+            }
+          },
+          "action": {
+            "name": "Action",
+            "data": {
+              "target_entities": "Controlled entities",
+              "target_action": "Action"
+            }
+          },
+          "broadcast": {
+            "name": "Announce",
+            "data": {
+              "broadcast_success": "Enable success announce",
+              "message": "Success announce text",
+              "broadcast_fail": "Enable failure announce",
+              "message_fail": "Failure announce text"
+            }
+          },
+          "timing": {
+            "name": "Timing",
+            "data": {
+              "cooldown": "Cooldown (s)",
+              "delay": "Delay before action (s)",
+              "verify_delay": "State check wait (s)"
+            }
+          },
+          "time_trigger": {
+            "name": "Time trigger",
+            "data": {
+              "trigger_time": "Trigger time"
+            }
+          },
+          "trigger_zone": {
+            "name": "Zone enter/leave",
+            "data": {
+              "trigger_person": "Person entity",
+              "trigger_entity": "Zone entity"
+            }
+          }
+        }
+      },
+      "remove_rule": {
+        "title": "Remove rule",
+        "data": {
+          "rule_id": "Rule"
+        }
+      }
+    },
+    "abort": {
+      "no_rules": "No rules"
+    },
+    "error": {
+      "name_required": "Scene name is required",
+      "trigger_entity_required": "Controller entity is required",
+      "trigger_time_required": "Trigger time is required",
+      "trigger_zone_required": "Person entity and zone entity are required"
+    }
+  },
+  "selector": {
+    "trigger_type": {
+      "options": {
+        "state": "State change",
+        "numeric_above": "Numeric above",
+        "numeric_below": "Numeric below",
+        "time": "Time trigger",
+        "zone_enter": "Person enters zone",
+        "zone_leave": "Person leaves zone"
+      }
+    },
+    "condition_logic": {
+      "options": {
+        "and": "All match (AND)",
+        "or": "Any match (OR)"
+      }
+    },
+    "weekdays": {
+      "options": {
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat",
+        "sun": "Sun"
+      }
+    },
+    "target_action": {
+      "options": {
+        "turn_on": "Turn on",
+        "turn_off": "Turn off",
+        "toggle": "Toggle",
+        "open": "Open cover",
+        "close": "Close cover",
+        "none": "None"
+      }
+    }
+  },
+  "entity": {
+    "switch": {
+      "enabled": {
+        "name": "Enabled"
+      }
+    },
+    "sensor": {
+      "enabled_count": {
+        "name": "Enabled rules"
+      },
+      "disabled_count": {
+        "name": "Disabled rules"
+      },
+      "today_success": {
+        "name": "Success today"
+      },
+      "today_fail": {
+        "name": "Failure today"
+      }
+    }
+  }
+}

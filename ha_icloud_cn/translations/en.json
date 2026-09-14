@@ -1,0 +1,256 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Account is already configured",
+            "no_device": "None of your devices have \"Find my iPhone\" activated",
+            "reauth_successful": "Re-authentication was successful"
+        },
+        "error": {
+            "invalid_auth": "Invalid authentication",
+            "send_verification_code": "Failed to send verification code",
+            "validate_verification_code": "Failed to verify your verification code, try again"
+        },
+        "step": {
+            "reauth": {
+                "data": {
+                    "password": "Password"
+                },
+                "description": "Your previously entered password for {username} is no longer working. Update your password to keep using this integration.",
+                "title": "Reauthenticate Integration"
+            },
+            "reauth_confirm": {
+                "data": {
+                    "password": "Password"
+                },
+                "description": "Your previously entered password for {username} is no longer working. Update your password to keep using this integration.",
+                "title": "Reauthenticate Integration"
+            },
+            "trusted_device": {
+                "data": {
+                    "trusted_device": "Trusted device"
+                },
+                "description": "Select your trusted device",
+                "title": "iCloud trusted device"
+            },
+            "user": {
+                "data": {
+                    "password": "Password",
+                    "username": "Email",
+                    "with_family": "With family",
+                    "max_interval": "Minimum update interval (minutes)"
+                },
+                "description": "Enter your credentials",
+                "title": "iCloud credentials"
+            },
+            "verification_code": {
+                "data": {
+                    "verification_code": "Verification code"
+                },
+                "description": "Please enter the verification code you just received from iCloud",
+                "title": "iCloud verification code"
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "iCloud options",
+                "menu_options": {
+                    "locate": "Locate settings",
+                    "amap": "Amap settings"
+                }
+            },
+            "locate": {
+                "title": "Locate settings",
+                "data": {
+                    "max_interval": "Minimum update interval (minutes)",
+                    "peak_enabled": "Enable peak updates",
+                    "peak_start_1": "Peak 1 start",
+                    "peak_end_1": "Peak 1 end",
+                    "peak_start_2": "Peak 2 start",
+                    "peak_end_2": "Peak 2 end",
+                    "peak_start_3": "Peak 3 start",
+                    "peak_end_3": "Peak 3 end",
+                    "peak_interval": "Peak update interval (minutes)",
+                    "offpeak_enabled": "Enable off-peak updates",
+                    "offpeak_start_1": "Off-peak 1 start",
+                    "offpeak_end_1": "Off-peak 1 end",
+                    "offpeak_start_2": "Off-peak 2 start",
+                    "offpeak_end_2": "Off-peak 2 end",
+                    "offpeak_interval": "Off-peak update interval (minutes)",
+                    "period_weekdays": "Peak/off-peak on weekdays only (Mon–Fri)"
+                }
+            },
+            "amap": {
+                "title": "Amap settings",
+                "data": {
+                    "commute_enabled": "Enabled",
+                    "commute_zones": "Home zones",
+                    "activity_entity": "Activity status",
+                    "amap_key": "Amap key"
+                },
+                "data_description": {
+                    "activity_entity": "Multiple; one per person. Values: 在家, 公司, 外出, 外地"
+                }
+            }
+        },
+        "error": {
+            "invalid_windows": "Select start and end time",
+            "commute_key": "Enter Amap key",
+            "commute_zones": "Select at least one home zone"
+        }
+    },
+    "entity": {
+        "sensor": {
+            "battery": {
+                "name": "Phone battery"
+            },
+            "steps": {
+                "name": "Today's steps"
+            },
+            "phone_status": {
+                "name": "Phone status",
+                "state": {
+                    "online": "Online",
+                    "offline": "Offline"
+                }
+            },
+            "update_time": {
+                "name": "Last update"
+            },
+            "query_time": {
+                "name": "Query time"
+            },
+            "created_at": {
+                "name": "Created at"
+            },
+            "address": {
+                "name": "Address"
+            },
+            "commute_distance": {
+                "name": "Commute distance"
+            },
+            "commute_time": {
+                "name": "Commute time"
+            },
+      "commute_info": {
+        "name": "Commute info"
+      },
+      "locate_count": {
+        "name": "Daily locate calls"
+      },
+      "amap_count": {
+        "name": "Daily Amap calls"
+      }
+    },
+    "button": {
+      "update": {
+        "name": "Update"
+      },
+      "play_sound": {
+        "name": "     Play sound"
+      },
+      "display_message": {
+        "name": "Display message"
+      },
+      "send_message": {
+        "name": "   Send message"
+      },
+      "lost_device": {
+        "name": "Lost device"
+      }
+    },
+    "text": {
+      "send_message": {
+        "name": "    Message"
+      },
+      "lost_number": {
+        "name": " Contact number"
+      },
+      "lost_message": {
+        "name": "  Lost message"
+      }
+    }
+  },
+    "services": {
+        "update": {
+            "name": "Update",
+            "description": "Update iCloud devices.",
+            "fields": {
+                "account": {
+                    "name": "Account",
+                    "description": "Your iCloud account username (email) or account name."
+                }
+            }
+        },
+        "play_sound": {
+            "name": "Play sound",
+            "description": "Play sound on an Apple device.",
+            "fields": {
+                "account": {
+                    "name": "Account",
+                    "description": "Your iCloud account username (email) or account name."
+                },
+                "device_name": {
+                    "name": "Device name",
+                    "description": "The name of the Apple device to play a sound."
+                }
+            }
+        },
+        "display_message": {
+            "name": "Display message",
+            "description": "Display a message on an Apple device.",
+            "fields": {
+                "account": {
+                    "name": "Account",
+                    "description": "Your iCloud account username (email) or account name."
+                },
+                "device_name": {
+                    "name": "Device name",
+                    "description": "The name of the Apple device to display the message."
+                },
+                "message": {
+                    "name": "Message",
+                    "description": "The content of your message."
+                },
+                "sound": {
+                    "name": "Sound",
+                    "description": "To make a sound when displaying the message."
+                }
+            }
+        },
+        "lost_device": {
+            "name": "Lost device",
+            "description": "Make an Apple device in lost state.",
+            "fields": {
+                "account": {
+                    "name": "Account",
+                    "description": "Your iCloud account username (email) or account name."
+                },
+                "device_name": {
+                    "name": "Device name",
+                    "description": "The name of the Apple device to set lost."
+                },
+                "number": {
+                    "name": "Number",
+                    "description": "The phone number to call in lost mode (must contain country code)."
+                },
+                "message": {
+                    "name": "Message",
+                    "description": "The message to display in lost mode."
+                }
+            }
+        }
+    },
+    "exceptions": {
+        "message_required": {
+            "message": "Please enter a message"
+        },
+        "lost_number_required": {
+            "message": "Please enter the contact number"
+        },
+        "lost_message_required": {
+            "message": "Please enter the lost message"
+        }
+    }
+}

@@ -1,0 +1,368 @@
+{
+  "title": "Fuel Price",
+  "entity": {
+    "button": {
+      "manual_update": {
+        "name": "Manual Update"
+      }
+    },
+    "sensor": {
+      "created_at": {
+        "name": "Created At"
+      },
+      "update_time": {
+        "name": "Price Update Time"
+      },
+      "trend": {
+        "name": "Price Trend",
+        "state_attributes": {
+          "full_text": {
+            "name": "Full text"
+          }
+        }
+      },
+      "fuel_92": {
+        "name": "92 Gasoline",
+        "state_attributes": {
+          "province": {
+            "name": "Province"
+          },
+          "fuel_type": {
+            "name": "Fuel type"
+          },
+          "update_time": {
+            "name": "Update time"
+          }
+        }
+      },
+      "fuel_95": {
+        "name": "95 Gasoline",
+        "state_attributes": {
+          "province": {
+            "name": "Province"
+          },
+          "fuel_type": {
+            "name": "Fuel type"
+          },
+          "update_time": {
+            "name": "Update time"
+          }
+        }
+      },
+      "fuel_98": {
+        "name": "98 Gasoline",
+        "state_attributes": {
+          "province": {
+            "name": "Province"
+          },
+          "fuel_type": {
+            "name": "Fuel type"
+          },
+          "update_time": {
+            "name": "Update time"
+          }
+        }
+      },
+      "fuel_0": {
+        "name": "0 Diesel",
+        "state_attributes": {
+          "province": {
+            "name": "Province"
+          },
+          "fuel_type": {
+            "name": "Fuel type"
+          },
+          "update_time": {
+            "name": "Update time"
+          }
+        }
+      },
+      "fuel_low_date": {
+        "name": "Lowest Price Date",
+        "state_attributes": {
+          "province": {
+            "name": "Province"
+          },
+          "low_92": {
+            "name": "92 lowest"
+          },
+          "low_95": {
+            "name": "95 lowest"
+          },
+          "low_98": {
+            "name": "98 lowest"
+          },
+          "low_0": {
+            "name": "0 lowest"
+          }
+        }
+      },
+      "fuel_92_low": {
+        "name": "92 Lowest Price",
+        "state_attributes": {
+          "province": {
+            "name": "Province"
+          },
+          "fuel_type": {
+            "name": "Fuel type"
+          },
+          "low_date": {
+            "name": "Lowest price date"
+          }
+        }
+      },
+      "fuel_95_low": {
+        "name": "95 Lowest Price",
+        "state_attributes": {
+          "province": {
+            "name": "Province"
+          },
+          "fuel_type": {
+            "name": "Fuel type"
+          },
+          "low_date": {
+            "name": "Lowest price date"
+          }
+        }
+      },
+      "fuel_98_low": {
+        "name": "98 Lowest Price",
+        "state_attributes": {
+          "province": {
+            "name": "Province"
+          },
+          "fuel_type": {
+            "name": "Fuel type"
+          },
+          "low_date": {
+            "name": "Lowest price date"
+          }
+        }
+      },
+      "fuel_0_low": {
+        "name": "0 Lowest Price",
+        "state_attributes": {
+          "province": {
+            "name": "Province"
+          },
+          "fuel_type": {
+            "name": "Fuel type"
+          },
+          "low_date": {
+            "name": "Lowest price date"
+          }
+        }
+      },
+      "fuel_92_cost": {
+        "name": "92 Fill Cost",
+        "state_attributes": {
+          "province": {
+            "name": "Province"
+          },
+          "fuel_type": {
+            "name": "Fuel type"
+          },
+          "fill_liters": {
+            "name": "Fill liters"
+          },
+          "unit_price": {
+            "name": "Unit price"
+          }
+        }
+      },
+      "fuel_95_cost": {
+        "name": "95 Fill Cost",
+        "state_attributes": {
+          "province": {
+            "name": "Province"
+          },
+          "fuel_type": {
+            "name": "Fuel type"
+          },
+          "fill_liters": {
+            "name": "Fill liters"
+          },
+          "unit_price": {
+            "name": "Unit price"
+          }
+        }
+      },
+      "fuel_98_cost": {
+        "name": "98 Fill Cost",
+        "state_attributes": {
+          "province": {
+            "name": "Province"
+          },
+          "fuel_type": {
+            "name": "Fuel type"
+          },
+          "fill_liters": {
+            "name": "Fill liters"
+          },
+          "unit_price": {
+            "name": "Unit price"
+          }
+        }
+      },
+      "fuel_0_cost": {
+        "name": "0 Fill Cost",
+        "state_attributes": {
+          "province": {
+            "name": "Province"
+          },
+          "fuel_type": {
+            "name": "Fuel type"
+          },
+          "fill_liters": {
+            "name": "Fill liters"
+          },
+          "unit_price": {
+            "name": "Unit price"
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "default_name": {
+      "message": "Fuel Price"
+    },
+    "fuel_92": {
+      "message": "92 Gasoline"
+    },
+    "fuel_95": {
+      "message": "95 Gasoline"
+    },
+    "fuel_98": {
+      "message": "98 Gasoline"
+    },
+    "fuel_0": {
+      "message": "0 Diesel"
+    },
+    "notify_daily_title": {
+      "message": "⛽ Today's fuel prices"
+    },
+    "notify_province": {
+      "message": "\n🚘{name}\n"
+    },
+    "notify_price_line": {
+      "message": "· {fuel}: {value}"
+    },
+    "notify_low_header": {
+      "message": "\n🎯 Lowest price"
+    },
+    "notify_low_95": {
+      "message": "· {name} 95 gasoline: {value}"
+    },
+    "notify_update_time": {
+      "message": "· Updated: {date}"
+    },
+    "notify_convert_header": {
+      "message": "\n🚖 {name} 95 conversion\n"
+    },
+    "notify_tank": {
+      "message": "· Tank: {liters} L"
+    },
+    "notify_cost_line": {
+      "message": "· {liters}L cost: {cost:.2f}|diff: {diff:.2f}"
+    },
+    "notify_low_line": {
+      "message": "· {fuel} low: {value}"
+    },
+    "notify_low_date": {
+      "message": "· Lowest price date: {date}"
+    },
+    "notify_near_low_title": {
+      "message": "🎯 Lowest price"
+    },
+    "notify_near_low_message": {
+      "message": "🚘{name}\n· Diff: {diff:.2f}\n· 95 current: {current:.2f}\n· 95 lowest: {low:.2f}"
+    },
+    "update_failed": {
+      "message": "Failed to fetch fuel prices for all provinces"
+    }
+  },
+  "config": {
+    "step": {
+      "user": {
+        "title": "Fuel Price",
+        "description": "Configure integration name",
+        "data": {
+          "name": "Name"
+        }
+      },
+      "province": {
+        "title": "Add Province",
+        "description": "Select a province or municipality to track",
+        "data": {
+          "province_code": "Province",
+          "notify_low": "Notify when near lowest price",
+          "notify": "Notify action"
+        }
+      }
+    },
+    "error": {
+      "already_province": "Province already added"
+    },
+    "abort": {
+      "already_configured": "Fuel Price is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Fuel Price Options",
+        "menu_options": {
+          "global": "Global Settings",
+          "add_province": "Add Province",
+          "edit_province": "Edit Province",
+          "remove_province": "Remove Province"
+        }
+      },
+      "global": {
+        "title": "Global Settings",
+        "data": {
+          "fill_liters": "Fill liters",
+          "notify_enable": "Enable notifications",
+          "notify_daily": "Notify daily",
+          "notify_weekend": "Notify on weekends",
+          "notify": "Notify action"
+        }
+      },
+      "add_province": {
+        "title": "Add Province",
+        "data": {
+          "province_code": "Province",
+          "notify_low": "Notify when near lowest price",
+          "notify": "Notify action"
+        }
+      },
+      "edit_province": {
+        "title": "Edit Province",
+        "data": {
+          "province": "Select province"
+        }
+      },
+      "edit_form": {
+        "title": "Edit Province",
+        "data": {
+          "province_code": "Province",
+          "notify_low": "Notify when near lowest price",
+          "notify": "Notify action"
+        }
+      },
+      "remove_province": {
+        "title": "Remove Province",
+        "data": {
+          "province": "Select province"
+        }
+      }
+    },
+    "error": {
+      "already_province": "Province already added"
+    },
+    "abort": {
+      "no_provinces": "No provinces configured"
+    }
+  }
+}

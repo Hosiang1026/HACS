@@ -1,0 +1,597 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "汽车统计",
+        "description": "勾选可选能力；都不勾则仅本地统计",
+        "data": {
+          "enable_12123": "交管12123",
+          "enable_amap": "高德车机GPS"
+        }
+      },
+      "province": {
+        "title": "12123 登录",
+        "description": "选择省份以获取登录二维码",
+        "data": {
+          "province": "省份"
+        }
+      },
+      "next": {
+        "title": "扫码登录",
+        "description": "{msg}"
+      },
+      "next_retry": {
+        "title": "扫码登录",
+        "description": "{msg}"
+      },
+      "reauth_confirm": {
+        "title": "12123 重新登录",
+        "description": "{msg}"
+      },
+      "reauth_confirm_retry": {
+        "title": "12123 重新登录",
+        "description": "{msg}"
+      },
+      "vehicle": {
+        "title": "选择车辆",
+        "description": "选择要统计的车辆",
+        "data": {
+          "vehicle_index": "车辆"
+        }
+      },
+      "stats": {
+        "title": "车辆信息",
+        "description": "里程/油价可直接填写，也可选实体；已选实体时优先用实体",
+        "data": {
+          "name": "汽车品牌",
+          "plate": "车牌号",
+          "fuel_grade": "油号",
+          "tank_capacity": "油箱升数",
+          "maint_interval_km": "保养周期(公里)",
+          "maint_interval_days": "保养周期(天)",
+          "purchase_date": "购车日期",
+          "insurance_expiry": "保险到期日",
+          "inspect_expiry": "年检到期日",
+          "maint_date": "保养日期",
+          "maint_odometer": "保养里程",
+          "battery_replace_date": "电池更换日期",
+          "odometer": "当前里程",
+          "fuel_price": "油价",
+          "odometer_entity": "里程实体",
+          "fuel_price_entity": "油价实体"
+        },
+        "data_description": {
+          "odometer": "未选里程实体时使用此数值",
+          "fuel_price": "未选油价实体时使用此单价",
+          "odometer_entity": "可选；选中后优先读取该实体，不可再改本集成里程",
+          "fuel_price_entity": "可选；选中后从实体读取对应油号单价",
+          "insurance_expiry": "可选，用于保险剩余天数",
+          "inspect_expiry": "可选，用于年检剩余天数",
+          "maint_date": "可选，上次保养日期",
+          "maint_odometer": "可选，上次保养时的里程",
+          "battery_replace_date": "可选，用于电池使用时间"
+        }
+      },
+      "notify": {
+        "title": "车辆通知",
+        "description": "分项开关；上年用车默认开启。保养到期按剩余里程/天数≤0通知；到期提前天数用于保险/年检/驾驶证",
+        "data": {
+          "notify_violation": "违章通知",
+          "notify_yearly": "上年用车通知",
+          "notify_maint": "保养到期通知",
+          "notify_insurance": "保险到期通知",
+          "notify_inspect": "年检到期通知",
+          "notify_license": "驾驶证到期通知",
+          "notify": "通知动作",
+          "announce": "播报设备",
+          "expire_notify_days": "到期提前天数",
+          "notify_leave": "离家通知",
+          "notify_arrive": "到家通知"
+        },
+        "data_description": {
+          "notify": "例如 notify.mobile_app_xxx，可多选",
+          "announce": "可选，通知同时语音播报",
+          "expire_notify_days": "保险/年检/驾驶证到期前提前天数"
+        }
+      },
+      "amap_auth": {
+        "title": "高德车机",
+        "description": "填写抓包得到的 Key / sessionid / 请求体",
+        "data": {
+          "amap_key": "Key (in)",
+          "amap_sessionid": "sessionid",
+          "amap_paramdata": "POST 参数"
+        }
+      },
+      "amap_car": {
+        "title": "选择车机",
+        "description": "车主 person 用于离线唤醒轮询，必填",
+        "data": {
+          "amap_tid": "车辆",
+          "owners": "车主",
+          "poll_active_minutes": "活跃轮询上限(分)"
+        }
+      }
+    },
+    "error": {
+      "invalid_response": "服务器响应格式错误",
+      "connection_error": "网络连接错误，请检查网络",
+      "server_error": "服务器错误，请稍后重试",
+      "unknown_error": "未知错误",
+      "no_image_data": "未获取到二维码图片",
+      "session_lost": "会话丢失，请重新配置",
+      "incomplete_auth": "认证信息不完整，请重试",
+      "please_scan": "请使用12123手机App扫描二维码",
+      "second_request_failed": "第二次请求失败",
+      "second_request_error": "第二次请求异常",
+      "no_redirect_url": "未获取到重定向URL",
+      "auth_failed": "认证过程中获取用户信息失败",
+      "missing_cookies": "登录认证失败，未获取到必需的认证信息",
+      "no_vehicles": "未获取到车辆列表，可先按车辆1继续",
+      "session_recreate_failed": "重新创建会话失败，请重试",
+      "scan_timeout": "扫码超时，请重试",
+      "required": "必填",
+      "amap_auth_failed": "高德凭证无效",
+      "amap_no_cars": "未获取到车机列表",
+      "amap_tid_configured": "该高德车机已被其他车辆绑定",
+      "vehicle_configured": "该 12123 车辆已被其他条目绑定"
+    },
+    "progress": {
+      "wait_scan": "{msg}"
+    },
+    "abort": {
+      "already_configured": "该车辆已配置",
+      "reauth_successful": "重新登录成功",
+      "unknown_error": "未知错误",
+      "amap_no_cars": "未获取到车机列表",
+      "amap_tid_configured": "该高德车机已被其他车辆绑定",
+      "vehicle_configured": "该 12123 车辆已被其他条目绑定"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "车辆设置",
+        "menu_options": {
+          "stats": "车辆信息",
+          "notify": "通知设置",
+          "amap": "高德车机",
+          "amap_session": "高德凭证",
+          "amap_bind": "绑定高德车机",
+          "opt_12123": "12123 车辆",
+          "amap_unbind": "解绑高德车机",
+          "unbind_12123": "解绑 12123",
+          "bind_12123": "绑定 12123"
+        }
+      },
+      "stats": {
+        "title": "车辆信息",
+        "description": "里程/油价可直接填写，也可选实体；已选实体时优先用实体",
+        "data": {
+          "name": "汽车品牌",
+          "plate": "车牌号",
+          "fuel_grade": "油号",
+          "tank_capacity": "油箱升数",
+          "maint_interval_km": "保养周期(公里)",
+          "maint_interval_days": "保养周期(天)",
+          "purchase_date": "购车日期",
+          "insurance_expiry": "保险到期日",
+          "inspect_expiry": "年检到期日",
+          "maint_date": "保养日期",
+          "maint_odometer": "保养里程",
+          "battery_replace_date": "电池更换日期",
+          "odometer": "当前里程",
+          "fuel_price": "油价",
+          "odometer_entity": "里程实体",
+          "fuel_price_entity": "油价实体"
+        },
+        "data_description": {
+          "odometer": "未选里程实体时使用此数值",
+          "fuel_price": "未选油价实体时使用此单价",
+          "odometer_entity": "可选；选中后优先读取该实体，不可再改本集成里程",
+          "fuel_price_entity": "可选；选中后从实体读取对应油号单价",
+          "insurance_expiry": "可选，用于保险剩余天数",
+          "inspect_expiry": "可选，用于年检剩余天数",
+          "maint_date": "可选，上次保养日期",
+          "maint_odometer": "可选，上次保养时的里程",
+          "battery_replace_date": "可选，用于电池使用时间"
+        }
+      },
+      "notify": {
+        "title": "车辆通知",
+        "description": "分项开关；上年用车默认开启。保养到期按剩余里程/天数≤0通知；到期提前天数用于保险/年检/驾驶证",
+        "data": {
+          "notify_violation": "违章通知",
+          "notify_yearly": "上年用车通知",
+          "notify_maint": "保养到期通知",
+          "notify_insurance": "保险到期通知",
+          "notify_inspect": "年检到期通知",
+          "notify_license": "驾驶证到期通知",
+          "notify": "通知动作",
+          "announce": "播报设备",
+          "expire_notify_days": "到期提前天数",
+          "notify_leave": "离家通知",
+          "notify_arrive": "到家通知"
+        },
+        "data_description": {
+          "notify": "例如 notify.mobile_app_xxx，可多选",
+          "announce": "可选，通知同时语音播报",
+          "expire_notify_days": "保险/年检/驾驶证到期前提前天数"
+        }
+      },
+      "opt_12123": {
+        "title": "12123 车辆",
+        "menu_options": {
+          "opt_12123_index": "车辆序号",
+          "opt_12123_relogin": "重新登录",
+          "opt_12123_logout": "退出登录"
+        }
+      },
+      "opt_12123_index": {
+        "title": "车辆序号",
+        "data": {
+          "vehicle_index": "车辆序号"
+        }
+      },
+      "opt_12123_relogin": {
+        "title": "重新登录"
+      },
+      "opt_12123_logout": {
+        "title": "退出登录"
+      },
+      "amap": {
+        "title": "高德车机",
+        "data": {
+          "owners": "车主",
+          "poll_active_minutes": "活跃轮询上限(分)",
+          "poll_exclude_zones": "排除区域",
+          "api_key": "API Key",
+          "private_key": "私钥",
+          "commute_zone": "家区域",
+          "address_distance": "地址刷新距离",
+          "commute_speed": "通勤算路最低车速",
+          "commute_interval": "通勤算路间隔"
+        },
+        "data_description": {
+          "private_key": "可选，留空则不签名"
+        }
+      },
+      "amap_session": {
+        "title": "高德凭证",
+        "description": "填写抓包得到的 Key / sessionid / 请求体",
+        "data": {
+          "amap_key": "Key (in)",
+          "amap_sessionid": "sessionid",
+          "amap_paramdata": "POST 参数"
+        }
+      },
+      "amap_bind": {
+        "title": "绑定高德车机",
+        "data": {
+          "amap_key": "Key (in)",
+          "amap_sessionid": "sessionid",
+          "amap_paramdata": "POST 参数",
+          "owners": "车主",
+          "poll_active_minutes": "活跃轮询上限(分)"
+        }
+      },
+      "amap_bind_car": {
+        "title": "选择车机",
+        "data": {
+          "amap_tid": "车辆"
+        }
+      },
+      "amap_unbind": {
+        "title": "解绑高德车机",
+        "description": "将移除高德 GPS 实体与凭证，本地统计保留"
+      },
+      "unbind_12123": {
+        "title": "解绑 12123",
+        "description": "将移除 12123 实体与登录信息，本地统计保留"
+      },
+      "bind_12123": {
+        "title": "绑定 12123",
+        "description": "扫码登录交管 12123",
+        "data": {}
+      },
+      "bind_province": {
+        "title": "12123 登录",
+        "description": "选择省份以获取登录二维码",
+        "data": {
+          "province": "省份"
+        }
+      },
+      "bind_next": {
+        "title": "扫码登录",
+        "description": "{msg}"
+      },
+      "bind_next_retry": {
+        "title": "扫码登录",
+        "description": "{msg}"
+      },
+      "bind_vehicle": {
+        "title": "选择车辆",
+        "description": "选择要绑定的车辆",
+        "data": {
+          "vehicle_index": "车辆"
+        }
+      }
+    },
+    "abort": {
+      "unknown_error": "未知错误",
+      "amap_no_cars": "未获取到车机列表",
+      "amap_tid_configured": "该高德车机已被其他车辆绑定",
+      "vehicle_configured": "该 12123 车辆已被其他条目绑定"
+    },
+    "error": {
+      "invalid_response": "服务器响应格式错误",
+      "connection_error": "网络连接错误，请检查网络",
+      "server_error": "服务器错误，请稍后重试",
+      "unknown_error": "未知错误",
+      "no_image_data": "未获取到二维码图片",
+      "session_lost": "会话丢失，请重新配置",
+      "incomplete_auth": "认证信息不完整，请重试",
+      "please_scan": "请使用12123手机App扫描二维码",
+      "second_request_failed": "第二次请求失败",
+      "second_request_error": "第二次请求异常",
+      "no_redirect_url": "未获取到重定向URL",
+      "auth_failed": "认证过程中获取用户信息失败",
+      "missing_cookies": "登录认证失败，未获取到必需的认证信息",
+      "no_vehicles": "未获取到车辆列表，可先按车辆1继续",
+      "session_recreate_failed": "重新创建会话失败，请重试",
+      "scan_timeout": "扫码超时，请重试",
+      "required": "必填",
+      "amap_auth_failed": "高德凭证无效",
+      "amap_no_cars": "未获取到车机列表",
+      "amap_tid_configured": "该高德车机已被其他车辆绑定",
+      "vehicle_configured": "该 12123 车辆已被其他条目绑定"
+    },
+    "progress": {
+      "wait_scan": "{msg}"
+    }
+  },
+  "entity": {
+    "number": {
+      "refuel_liters": {
+        "name": "󠀄加油升数"
+      },
+      "refuel_cost": {
+        "name": "󠀃加油金额"
+      },
+      "odometer": {
+        "name": "󠀂汽车里程"
+      }
+    },
+    "text": {
+      "station_name": {
+        "name": "󠀁加油站"
+      }
+    },
+    "button": {
+      "add_refuel": {
+        "name": "󠀅确认加油"
+      }
+    },
+    "sensor": {
+      "avg_consumption": {
+        "name": "平均油耗",
+        "unit_of_measurement": "L/100km"
+      },
+      "consumption_rating": {
+        "name": "油耗等级"
+      },
+      "last_refuel_liters": {
+        "name": "上次加油升数"
+      },
+      "last_refuel_cost": {
+        "name": "上次加油金额"
+      },
+      "fuel_price": {
+        "name": "当前油价",
+        "unit_of_measurement": "元/L"
+      },
+      "monthly_fuel_cost": {
+        "name": "本月油费"
+      },
+      "yearly_fuel_cost": {
+        "name": "本年油费"
+      },
+      "monthly_etc_cost": {
+        "name": "本月高速费"
+      },
+      "yearly_total_cost": {
+        "name": "本年总费用"
+      },
+      "cost_per_km": {
+        "name": "每公里费用",
+        "unit_of_measurement": "元/km"
+      },
+      "driving_odometer": {
+        "name": "汽车驾驶里程"
+      },
+      "km_until_maint": {
+        "name": "保养剩余里程"
+      },
+      "days_until_maint": {
+        "name": "保养剩余天数"
+      },
+      "insurance_days": {
+        "name": "保险剩余天数"
+      },
+      "usage_time": {
+        "name": "汽车使用时间",
+        "unit_of_measurement": "年"
+      },
+      "battery_usage_time": {
+        "name": "电池使用时间",
+        "unit_of_measurement": "年"
+      },
+      "yearly_refuels": {
+        "name": "本年加油记录"
+      },
+      "yearly_history": {
+        "name": "历年用车统计"
+      },
+      "plate": {
+        "name": "车牌号"
+      },
+      "vehicle_type": {
+        "name": "车辆类型"
+      },
+      "vehicle_status": {
+        "name": "车辆状态"
+      },
+      "inspection_days": {
+        "name": "年检剩余天数"
+      },
+      "license_type": {
+        "name": "证件车型"
+      },
+      "license_status": {
+        "name": "驾驶证状态"
+      },
+      "license_points": {
+        "name": "剩余记分"
+      },
+      "license_clear": {
+        "name": "清分日期"
+      },
+      "license_expiry": {
+        "name": "驾驶证有效期"
+      },
+      "violations": {
+        "name": "违章监控记录"
+      },
+      "session": {
+        "name": "12123会话"
+      },
+      "login_time": {
+        "name": "12123登录时间"
+      },
+      "amap_parkingtime": {
+        "name": "停车时长"
+      },
+      "amap_speed": {
+        "name": "汽车车速"
+      },
+      "amap_address": {
+        "name": "当前地址"
+      },
+      "amap_navistatus": {
+        "name": "导航状态"
+      },
+      "amap_carstatus": {
+        "name": "行驶状态"
+      },
+      "amap_drivetime": {
+        "name": "开车时长"
+      },
+      "amap_commute_distance": {
+        "name": "到终点距离",
+        "unit_of_measurement": "公里"
+      },
+      "amap_commute_time": {
+        "name": "到终点时间"
+      },
+      "amap_navi_dest": {
+        "name": "导航终点"
+      },
+      "amap_commute_toll": {
+        "name": "过路费"
+      },
+      "amap_traffic_lights": {
+        "name": "红绿灯"
+      },
+      "amap_course": {
+        "name": "汽车航向"
+      },
+      "amap_restrict_tail": {
+        "name": "限行尾号"
+      },
+      "amap_querytime": {
+        "name": "查询时间"
+      },
+      "amap_login_time": {
+        "name": "高德登录时间"
+      },
+      "amap_api_calls": {
+        "name": "每日高德调用次数"
+      }
+    },
+    "device_tracker": {
+      "gps": {
+        "name": "汽车"
+      }
+    }
+  },
+  "services": {
+    "add_refuel": {
+      "name": "记录加油",
+      "description": "写入一条加油记录",
+      "fields": {
+        "liters": {
+          "name": "升数",
+          "description": "本次加油升数"
+        },
+        "cost": {
+          "name": "金额",
+          "description": "本次加油金额"
+        },
+        "odometer": {
+          "name": "里程",
+          "description": "当前里程"
+        },
+        "full": {
+          "name": "加满",
+          "description": "是否加满"
+        },
+        "station": {
+          "name": "加油站",
+          "description": "加油站（可选）"
+        }
+      }
+    },
+    "add_expense": {
+      "name": "记录费用",
+      "description": "写入一条费用（高速/停车/保险/维修/其他）",
+      "fields": {
+        "type": {
+          "name": "类型",
+          "description": "etc / park / insure / repair / other"
+        },
+        "amount": {
+          "name": "金额",
+          "description": "费用金额"
+        }
+      }
+    },
+    "add_maintenance": {
+      "name": "记录保养",
+      "description": "写入保养记录，并同步车辆信息中的保养日期与保养里程",
+      "fields": {
+        "odometer": {
+          "name": "里程",
+          "description": "保养时里程"
+        },
+        "type": {
+          "name": "类型",
+          "description": "保养类型"
+        },
+        "cost": {
+          "name": "金额",
+          "description": "保养费用"
+        }
+      }
+    },
+    "set_odometer": {
+      "name": "设置里程",
+      "description": "更新当前里程",
+      "fields": {
+        "odometer": {
+          "name": "里程",
+          "description": "当前里程"
+        }
+      }
+    }
+  }
+}

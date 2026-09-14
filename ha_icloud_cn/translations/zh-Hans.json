@@ -1,0 +1,256 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "账户已配置完成",
+            "no_device": "没有设备启用“查找”",
+            "reauth_successful": "重新认证成功"
+        },
+        "error": {
+            "invalid_auth": "认证无效",
+            "send_verification_code": "无法发送验证码",
+            "validate_verification_code": "无法验证验证码，请选择受信任的设备并重新开始验证"
+        },
+        "step": {
+            "reauth": {
+                "data": {
+                    "password": "密码"
+                },
+                "description": "您之前为 {username} 输入的密码已失效。请更新密码以继续使用此集成。",
+                "title": "重新认证集成"
+            },
+            "reauth_confirm": {
+                "data": {
+                    "password": "密码"
+                },
+                "description": "您之前为 {username} 输入的密码已失效。请更新密码以继续使用此集成。",
+                "title": "重新认证集成"
+            },
+            "trusted_device": {
+                "data": {
+                    "trusted_device": "受信任的设备"
+                },
+                "description": "选择受信任的设备",
+                "title": "iCloud 受信任的设备"
+            },
+            "user": {
+                "data": {
+                    "password": "密码",
+                    "username": "邮箱",
+                    "with_family": "包含家庭设备",
+                    "max_interval": "最短刷新间隔（分钟）"
+                },
+                "description": "请输入凭据",
+                "title": "iCloud 凭据"
+            },
+            "verification_code": {
+                "data": {
+                    "verification_code": "验证码"
+                },
+                "description": "请输入您刚刚从 iCloud 收到的验证码",
+                "title": "iCloud 验证码"
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "iCloud 选项",
+                "menu_options": {
+                    "locate": "定位设置",
+                    "amap": "高德设置"
+                }
+            },
+            "locate": {
+                "title": "定位设置",
+                "data": {
+                    "max_interval": "平时刷新间隔（分钟）",
+                    "peak_enabled": "启用高峰时段",
+                    "peak_start_1": "高峰1 开始",
+                    "peak_end_1": "高峰1 结束",
+                    "peak_start_2": "高峰2 开始",
+                    "peak_end_2": "高峰2 结束",
+                    "peak_start_3": "高峰3 开始",
+                    "peak_end_3": "高峰3 结束",
+                    "peak_interval": "高峰刷新间隔（分钟）",
+                    "offpeak_enabled": "启用低谷时段",
+                    "offpeak_start_1": "低谷1 开始",
+                    "offpeak_end_1": "低谷1 结束",
+                    "offpeak_start_2": "低谷2 开始",
+                    "offpeak_end_2": "低谷2 结束",
+                    "offpeak_interval": "低谷刷新间隔（分钟）",
+                    "period_weekdays": "高峰/低谷仅工作日（周一至周五）"
+                }
+            },
+            "amap": {
+                "title": "高德设置",
+                "data": {
+                    "commute_enabled": "是否启用",
+                    "commute_zones": "家区域",
+                    "activity_entity": "活动状态",
+                    "amap_key": "高德 Key"
+                },
+                "data_description": {
+                    "activity_entity": "可多选，每人对应一个；值：在家、公司、外出、外地"
+                }
+            }
+        },
+        "error": {
+            "invalid_windows": "请选择开始和结束时间",
+            "commute_key": "请填写高德 Key",
+            "commute_zones": "请选择至少一个家区域"
+        }
+    },
+    "entity": {
+        "sensor": {
+            "battery": {
+                "name": "手机电量"
+            },
+            "steps": {
+                "name": "今日步数"
+            },
+            "phone_status": {
+                "name": "手机状态",
+                "state": {
+                    "online": "在线",
+                    "offline": "离线"
+                }
+            },
+            "update_time": {
+                "name": "更新时间"
+            },
+            "query_time": {
+                "name": "查询时间"
+            },
+            "created_at": {
+                "name": "创建时间"
+            },
+            "address": {
+                "name": "位置地址"
+            },
+            "commute_distance": {
+                "name": "通勤距离"
+            },
+            "commute_time": {
+                "name": "通勤时间"
+            },
+      "commute_info": {
+        "name": "通勤信息"
+      },
+      "locate_count": {
+        "name": "每日定位调用次数"
+      },
+      "amap_count": {
+        "name": "每日高德调用次数"
+      }
+    },
+    "button": {
+      "update": {
+        "name": "更新"
+      },
+      "play_sound": {
+        "name": "     播放声音"
+      },
+      "display_message": {
+        "name": "显示消息"
+      },
+      "send_message": {
+        "name": "   发送消息"
+      },
+      "lost_device": {
+        "name": "设备丢失"
+      }
+    },
+    "text": {
+      "send_message": {
+        "name": "    消息内容"
+      },
+      "lost_number": {
+        "name": " 联系电话"
+      },
+      "lost_message": {
+        "name": "  丢失留言"
+      }
+    }
+  },
+    "services": {
+        "update": {
+            "name": "更新",
+            "description": "更新 iCloud 设备。",
+            "fields": {
+                "account": {
+                    "name": "账户",
+                    "description": "iCloud 账户用户名（邮箱）或账户名称。"
+                }
+            }
+        },
+        "play_sound": {
+            "name": "播放声音",
+            "description": "在 Apple 设备上播放声音。",
+            "fields": {
+                "account": {
+                    "name": "账户",
+                    "description": "iCloud 账户用户名（邮箱）或账户名称。"
+                },
+                "device_name": {
+                    "name": "设备名称",
+                    "description": "要播放声音的 Apple 设备名称。"
+                }
+            }
+        },
+        "display_message": {
+            "name": "显示消息",
+            "description": "在 Apple 设备上显示消息。",
+            "fields": {
+                "account": {
+                    "name": "账户",
+                    "description": "iCloud 账户用户名（邮箱）或账户名称。"
+                },
+                "device_name": {
+                    "name": "设备名称",
+                    "description": "要显示消息的 Apple 设备名称。"
+                },
+                "message": {
+                    "name": "消息",
+                    "description": "消息内容。"
+                },
+                "sound": {
+                    "name": "声音",
+                    "description": "显示消息时播放声音。"
+                }
+            }
+        },
+        "lost_device": {
+            "name": "丢失设备",
+            "description": "将 Apple 设备设为丢失模式。",
+            "fields": {
+                "account": {
+                    "name": "账户",
+                    "description": "iCloud 账户用户名（邮箱）或账户名称。"
+                },
+                "device_name": {
+                    "name": "设备名称",
+                    "description": "要设为丢失的 Apple 设备名称。"
+                },
+                "number": {
+                    "name": "电话号码",
+                    "description": "丢失模式下拨打的电话号码（须含国家区号）。"
+                },
+                "message": {
+                    "name": "消息",
+                    "description": "丢失模式下显示的消息。"
+                }
+            }
+        }
+    },
+    "exceptions": {
+        "message_required": {
+            "message": "请填写消息内容"
+        },
+        "lost_number_required": {
+            "message": "请填写联系电话"
+        },
+        "lost_message_required": {
+            "message": "请填写丢失留言"
+        }
+    }
+}

@@ -1,0 +1,91 @@
+add_refuel:
+  target:
+    device:
+      integration: ha_car_stats
+  fields:
+    liters:
+      selector:
+        number:
+          min: 0
+          max: 200
+          step: 0.01
+          unit_of_measurement: L
+    cost:
+      selector:
+        number:
+          min: 0
+          max: 9000
+          step: 0.01
+          unit_of_measurement: CNY
+    odometer:
+      selector:
+        number:
+          min: 0
+          max: 999999
+          step: 0.1
+          unit_of_measurement: km
+    full:
+      default: true
+      selector:
+        boolean:
+    station:
+      selector:
+        text:
+add_expense:
+  target:
+    device:
+      integration: ha_car_stats
+  fields:
+    type:
+      required: true
+      selector:
+        select:
+          options:
+            - etc
+            - park
+            - insure
+            - repair
+            - other
+    amount:
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 900000
+          step: 0.01
+          unit_of_measurement: CNY
+add_maintenance:
+  target:
+    device:
+      integration: ha_car_stats
+  fields:
+    odometer:
+      selector:
+        number:
+          min: 0
+          max: 999999
+          step: 0.1
+          unit_of_measurement: km
+    type:
+      selector:
+        text:
+    cost:
+      selector:
+        number:
+          min: 0
+          max: 900000
+          step: 0.01
+          unit_of_measurement: CNY
+set_odometer:
+  target:
+    device:
+      integration: ha_car_stats
+  fields:
+    odometer:
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 999999
+          step: 0.1
+          unit_of_measurement: km

@@ -1,0 +1,55 @@
+send:
+  fields:
+    title:
+      name: 标题
+      description: 通知标题
+    message:
+      name: 内容
+      description: 通知正文
+    content:
+      name: 轮播内容
+      description: 轮播显示内容，未填时使用 message
+    source:
+      name: 来源
+      description: 轮播来源标识
+    channels:
+      name: 渠道
+      description: 渠道 ID 列表，留空则推送到所有已启用渠道
+    carousel:
+      name: 加入轮播
+      description: 是否同时加入消息轮播队列
+    entry_id:
+      name: 实例 ID
+      description: 多实例时指定 config entry id
+
+carousel:
+  fields:
+    content:
+      name: 内容
+      description: 轮播消息内容
+    source:
+      name: 来源
+      description: 消息来源
+    entry_id:
+      name: 实例 ID
+      description: 多实例时指定 config entry id
+
+clear:
+  fields:
+    entry_id:
+      name: 实例 ID
+      description: 多实例时指定 config entry id
+
+remove:
+  fields:
+    index:
+      name: 索引
+      description: 队列中的消息序号，从 0 开始（见 sensor.message_queue 的 messages）
+      required: true
+      selector:
+        number:
+          min: 0
+          mode: box
+    entry_id:
+      name: 实例 ID
+      description: 多实例时指定 config entry id
