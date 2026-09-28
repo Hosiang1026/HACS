@@ -3,9 +3,10 @@ import json
 import datetime
 import time
 import logging
-import re
 import base64
 import hashlib
+import random
+import string
 from urllib import parse
 import aiohttp
 import async_timeout
@@ -19,24 +20,60 @@ from homeassistant.util.dt import utcnow
 from .const import (
     COORDINATE_GCJ02,
     DOMAIN,
+    FLAG_EMAIL,
+    FLAG_PHONE,
 )
 _LOGGER = logging.getLogger(__name__)
 
+LOGIN_OK = "ok"
+LOGIN_NEED_VERIFY = "need_verify"
+LOGIN_INVALID = "invalid_auth"
+LOGIN_FAIL = "fail"
+
+
 class XiaomiCloudDataUpdateCoordinator(DataUpdateCoordinator):
     """小米云服务数据更新协调器."""
-    def __init__(self, hass, user, password, scan_interval):
+    def __init__(
+        self,
+        hass,
+        user,
+        password,
+        scan_interval,
+        pass_token=None,
+        user_id=None,
+        device_id=None,
+        schedule_refresh=True,
+    ):
         """初始化协调器."""
         self._username = user
         self._password = password
-        self._headers = {}
+        self._pass_token = pass_token
+        self._device_id = device_id or "".join(
+            random.choice(string.ascii_uppercase + string.digits) for _ in range(16)
+        )
+        if not device_id:
+            self.token_updated = True
+        else:
+            self.token_updated = False
+        self._headers = {
+            'User-Agent': (
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            )
+        }
         self._cookies = {}
         self._device_info = {}
         self._serviceLoginAuth2_json = {}
         self._sign = None
+        self._login_qs = None
+        self._login_callback = None
         self._scan_interval = int(scan_interval)
+        self._verify_flag = None
+        self._identity_session = None
+        self.verify_target = None
 
         self.service_data = None
-        self.userId = None
+        self.userId = user_id
         self.login_result = False
         self.service = None
         self._last_position_update = {}
@@ -49,93 +86,520 @@ class XiaomiCloudDataUpdateCoordinator(DataUpdateCoordinator):
         update_interval = datetime.timedelta(minutes=self._scan_interval)
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=update_interval)
 
-        hass.async_create_task(self._schedule_initial_refresh())
+        if schedule_refresh:
+            hass.async_create_task(self._schedule_initial_refresh())
+
+    def _parse_xiaomi_json(self, text: str) -> dict:
+        if text.startswith("&&&START&&&"):
+            text = text[11:]
+        return json.loads(text)
+
+    def export_tokens(self) -> dict:
+        return {
+            "pass_token": self._pass_token,
+            "user_id": self.userId,
+            "device_id": self._device_id,
+        }
+
+    async def async_setup_login(self, session) -> str:
+        """配置流程登录，返回 LOGIN_*."""
+        return await self._relogin(session, allow_2fa=True)
+
+    async def _relogin(self, session, allow_2fa: bool = False) -> str:
+        """优先 passToken，失败再用密码。后台 allow_2fa=False 不会自动发验证码."""
+        if self._pass_token and self.userId:
+            if await self._login_with_pass_token(session):
+                if await self._get_device_info(session):
+                    self.login_result = True
+                    return LOGIN_OK
+                self.login_result = False
+        result = await self._password_login(session, allow_2fa=allow_2fa)
+        if result == LOGIN_OK:
+            if await self._get_device_info(session):
+                self.login_result = True
+                return LOGIN_OK
+            self.login_result = False
+            return LOGIN_FAIL
+        return result
+
+    async def async_verify_ticket(self, session, ticket: str) -> str:
+        """提交短信/邮箱验证码."""
+        if not self._identity_session or self._verify_flag is None:
+            return LOGIN_FAIL
+        key = "Phone" if self._verify_flag == FLAG_PHONE else "Email"
+        try:
+            with async_timeout.timeout(15):
+                r = await session.post(
+                    f"https://account.xiaomi.com/identity/auth/verify{key}",
+                    cookies={"identity_session": self._identity_session},
+                    params={
+                        "_flag": self._verify_flag,
+                        "ticket": ticket.strip(),
+                        "trust": "true",
+                        "_json": "true",
+                    },
+                    headers=self._headers,
+                )
+            resp = self._parse_xiaomi_json(await r.text())
+            if resp.get("code") != 0:
+                _LOGGER.warning("验证码错误: %s", resp.get("description") or resp.get("desc"))
+                return LOGIN_INVALID
+            self._collect_auth_cookies(session, r, resp)
+            if not await self._finish_credentials(session, resp):
+                return LOGIN_FAIL
+            if not await self._get_device_info(session):
+                return LOGIN_FAIL
+            self.login_result = True
+            return LOGIN_OK
+        except Exception as e:
+            _LOGGER.warning("验证码校验失败: %s", str(e))
+            return LOGIN_FAIL
+
+    def _collect_auth_cookies(self, session, response, data: dict | None = None) -> None:
+        sources = list(getattr(response, "history", ()) or ()) + [response]
+        for resp in sources:
+            for key, morsel in resp.cookies.items():
+                if key == "passToken" and morsel.value:
+                    self._pass_token = morsel.value
+                    self.token_updated = True
+                elif key == "serviceToken" and morsel.value:
+                    self._Service_Token = morsel.value
+                elif key == "userId" and morsel.value:
+                    self.userId = str(morsel.value)
+                elif key == "cUserId" and morsel.value:
+                    self._cookies["cUserId"] = morsel.value
+            ext = resp.headers.get("extension-pragma")
+            if ext:
+                try:
+                    payload = json.loads(ext)
+                    if data is not None:
+                        data.update(payload)
+                    if payload.get("ssecurity"):
+                        self._serviceLoginAuth2_json.update(payload)
+                    if payload.get("passToken"):
+                        self._pass_token = payload["passToken"]
+                        self.token_updated = True
+                except Exception:
+                    pass
+        if data:
+            if data.get("passToken"):
+                self._pass_token = data["passToken"]
+                self.token_updated = True
+            if data.get("userId"):
+                self.userId = str(data["userId"])
+        if not self._pass_token:
+            self._pass_token = self._cookie_from_jar(session, "passToken") or self._pass_token
+        if not self.userId:
+            jar_uid = self._cookie_from_jar(session, "userId")
+            if jar_uid:
+                self.userId = str(jar_uid)
+        if not self._Service_Token:
+            self._Service_Token = self._cookie_from_jar(session, "serviceToken")
+
+    @staticmethod
+    def _extract_skip_url(url: str) -> str | None:
+        parsed = parse.urlparse(url)
+        if not parsed.path.startswith("/fe/"):
+            return None
+        skip = parse.parse_qs(parsed.query).get("skipUrl", [None])[0]
+        if not skip:
+            return None
+        if skip.startswith("http"):
+            return skip
+        return "https://account.xiaomi.com" + skip
+
+    async def _finish_credentials(self, session, data: dict) -> bool:
+        """二次验证后：跟随 location → 再用 passToken 换 i.mi.com 票据."""
+        try:
+            location = data.get("location") or ""
+            if location.startswith("/"):
+                location = "https://account.xiaomi.com" + location
+            if location:
+                with async_timeout.timeout(20):
+                    r = await session.get(
+                        location, headers=self._headers, allow_redirects=True
+                    )
+                self._collect_auth_cookies(session, r, data)
+                skip = self._extract_skip_url(str(r.url))
+                if skip:
+                    with async_timeout.timeout(20):
+                        r2 = await session.get(
+                            skip, headers=self._headers, allow_redirects=True
+                        )
+                    self._collect_auth_cookies(session, r2, data)
+
+            if self._pass_token and self.userId:
+                if await self._login_with_pass_token(session):
+                    return True
+
+            if data.get("ssecurity") and data.get("location"):
+                self._serviceLoginAuth2_json = {
+                    **self._serviceLoginAuth2_json,
+                    **data,
+                }
+                if await self._login_miai(session):
+                    return True
+
+            if self._Service_Token and self.userId:
+                return True
+
+            _LOGGER.warning(
+                "验证后换票失败 passToken=%s userId=%s",
+                bool(self._pass_token),
+                self.userId,
+            )
+            return False
+        except Exception as e:
+            _LOGGER.warning("完成登录凭据失败: %s", str(e))
+            return False
+
+    async def _login_with_pass_token(self, session) -> bool:
+        """用 passToken 换 i.mi.com 的 ssecurity/serviceToken（使用干净会话，避免二次验证残留 cookie）。"""
+        try:
+            jar = aiohttp.CookieJar(unsafe=True)
+            async with aiohttp.ClientSession(cookie_jar=jar) as clean:
+                cookies = {
+                    "userId": str(self.userId),
+                    "passToken": self._pass_token,
+                    "sdkVersion": "accountsdk-18.8.15",
+                    "deviceId": self._device_id,
+                }
+                with async_timeout.timeout(15):
+                    r = await clean.get(
+                        "https://account.xiaomi.com/pass/serviceLogin",
+                        cookies=cookies,
+                        params={"_json": "true", "sid": "i.mi.com", "_locale": "zh_CN"},
+                        headers=self._headers,
+                    )
+                text = await r.text()
+                resp = self._parse_xiaomi_json(text)
+                if resp.get("passToken"):
+                    self._pass_token = resp["passToken"]
+                    self.token_updated = True
+                if resp.get("userId"):
+                    self.userId = str(resp["userId"])
+                if not resp.get("ssecurity") or not resp.get("location"):
+                    _LOGGER.warning(
+                        "passToken 登录未拿到 ssecurity: code=%s desc=%s keys=%s",
+                        resp.get("code"),
+                        resp.get("description") or resp.get("desc"),
+                        list(resp.keys()),
+                    )
+                    return False
+                self._serviceLoginAuth2_json = resp
+                return await self._sts_exchange(clean, resp)
+        except Exception as e:
+            _LOGGER.warning("passToken 登录出错: %s", str(e))
+            return False
+
+    def _set_cookie_values(self, response) -> dict[str, str]:
+        found: dict[str, str] = {}
+        for resp in list(getattr(response, "history", ()) or ()) + [response]:
+            for key, morsel in resp.cookies.items():
+                if morsel.value:
+                    found[key] = morsel.value
+            raw = resp.headers.getall("Set-Cookie", [])
+            for item in raw:
+                part = item.split(";", 1)[0]
+                if "=" not in part:
+                    continue
+                name, value = part.split("=", 1)
+                name = name.strip()
+                value = value.strip()
+                if name and value:
+                    found[name] = value
+        return found
+
+    async def _sts_exchange(self, session, auth: dict) -> bool:
+        location = auth.get("location")
+        if not location:
+            return False
+        if auth.get("passToken"):
+            self._pass_token = auth["passToken"]
+            self.token_updated = True
+        if auth.get("userId"):
+            self.userId = str(auth["userId"])
+
+        urls: list[str] = []
+        if auth.get("nonce") is not None and auth.get("ssecurity"):
+            nsec = "nonce={}&{}".format(auth["nonce"], auth["ssecurity"])
+            client_sign = base64.b64encode(hashlib.sha1(nsec.encode("utf-8")).digest()).decode()
+            sep = "&" if "?" in location else "?"
+            urls.append(f"{location}{sep}clientSign={parse.quote(client_sign)}")
+        urls.append(location)
+
+        headers = {
+            "User-Agent": "MISoundBox/1.4.0,iosPassportSDK/iOS-3.2.7 iOS/11.2.5",
+            "Accept-Language": "zh-cn",
+            "Connection": "keep-alive",
+            "Cookie": (
+                f"userId={self.userId}; passToken={self._pass_token}; "
+                f"deviceId={self._device_id}; sdkVersion=accountsdk-18.8.15"
+            ),
+        }
+        last_status = None
+        last_body = ""
+        for url in urls:
+            for allow_redirects in (False, True):
+                with async_timeout.timeout(15):
+                    r = await session.get(
+                        url, headers=headers, allow_redirects=allow_redirects
+                    )
+                last_status = r.status
+                cookies = self._set_cookie_values(r)
+                body = ""
+                if allow_redirects or r.status == 200:
+                    body = (await r.text()) or ""
+                    last_body = body[:200]
+                service_token = cookies.get("serviceToken")
+                user_id = cookies.get("userId") or self.userId
+                if service_token and user_id:
+                    self._Service_Token = service_token
+                    self.userId = str(user_id)
+                    if cookies.get("passToken"):
+                        self._pass_token = cookies["passToken"]
+                        self.token_updated = True
+                    _LOGGER.debug("STS 换票成功，用户ID: %s", self.userId)
+                    return True
+                if body and ("<html" in body.lower() or "<!doctype" in body.lower()):
+                    break
+                if not allow_redirects and r.status in (301, 302, 303, 307, 308):
+                    loc = r.headers.get("Location")
+                    if loc:
+                        with async_timeout.timeout(15):
+                            r2 = await session.get(
+                                loc, headers=headers, allow_redirects=True
+                            )
+                        cookies.update(self._set_cookie_values(r2))
+                        service_token = cookies.get("serviceToken")
+                        user_id = cookies.get("userId") or self.userId
+                        if service_token and user_id:
+                            self._Service_Token = service_token
+                            self.userId = str(user_id)
+                            _LOGGER.debug("STS 重定向换票成功，用户ID: %s", self.userId)
+                            return True
+                        last_status = r2.status
+                        last_body = ((await r2.text()) or "")[:200]
+        _LOGGER.warning(
+            "登录小米云服务失败，状态码: %s body=%s",
+            last_status,
+            last_body,
+        )
+        return False
+
+    async def _login_miai(self, session):
+        """登录小米云服务."""
+        try:
+            auth = self._serviceLoginAuth2_json
+            jar = aiohttp.CookieJar(unsafe=True)
+            async with aiohttp.ClientSession(cookie_jar=jar) as clean:
+                return await self._sts_exchange(clean, auth)
+        except Exception as e:
+            _LOGGER.warning("登录小米云服务时出错: %s", str(e))
+            return False
+
+    async def _password_login(self, session, allow_2fa: bool = True) -> str:
+        if not await self._get_sign(session):
+            return LOGIN_FAIL
+        if self._sign is True and self._serviceLoginAuth2_json.get("ssecurity"):
+            if await self._login_miai(session):
+                return LOGIN_OK
+            return LOGIN_FAIL
+        auth = await self._serviceLoginAuth2(session, allow_2fa=allow_2fa)
+        if auth == LOGIN_NEED_VERIFY:
+            return LOGIN_NEED_VERIFY
+        if auth != LOGIN_OK:
+            return auth
+        if self._serviceLoginAuth2_json.get("code", -1) not in (0, None):
+            if not self._serviceLoginAuth2_json.get("ssecurity"):
+                return LOGIN_INVALID
+        if not await self._login_miai(session):
+            return LOGIN_FAIL
+        return LOGIN_OK
 
     async def _get_sign(self, session):
         """获取签名信息."""
-        url = 'https://account.xiaomi.com/pass/serviceLogin?sid%3Di.mi.com&sid=i.mi.com&_locale=zh_CN&_snsNone=true'
-        pattern = re.compile(r'_sign=(.*?)&')
+        url = 'https://account.xiaomi.com/pass/serviceLogin?sid=i.mi.com&_json=true&_locale=zh_CN'
         _LOGGER.debug("开始获取签名")
         try:
             with async_timeout.timeout(15):
                 r = await session.get(url, headers=self._headers)
-            self._cookies['pass_trace'] = r.history[0].headers.getall('Set-Cookie')[2].split(";")[0].split("=")[1]
-            sign_value = parse.unquote(pattern.findall(r.history[0].headers.getall('Location')[0])[0])
-            _LOGGER.debug("获取到签名: %s", sign_value)
-            self._sign = sign_value
+            resp = self._parse_xiaomi_json(await r.text())
+            if resp.get("ssecurity") and resp.get("location"):
+                self._serviceLoginAuth2_json = resp
+                self._sign = True
+                return True
+            if not resp.get("_sign"):
+                _LOGGER.warning("获取签名失败: %s", resp.get("description") or resp.get("desc") or resp)
+                return False
+            self._sign = resp["_sign"]
+            self._login_qs = resp.get("qs") or "%3Fsid%3Di.mi.com"
+            self._login_callback = resp.get("callback") or "https://i.mi.com/sts"
+            for key, morsel in r.cookies.items():
+                self._cookies[key] = morsel.value
+            _LOGGER.debug("获取到签名: %s", self._sign)
             return True
         except Exception as e:
             _LOGGER.warning("获取签名时出错: %s", str(e))
             return False
 
-    async def _serviceLoginAuth2(self, session, captCode=None):
-        """执行服务登录认证."""
-        url = 'https://account.xiaomi.com/pass/serviceLoginAuth2'
-        self._headers['Content-Type'] = 'application/x-www-form-urlencoded'
-        self._headers['Accept'] = '*/*'
-        self._headers['Origin'] = 'https://account.xiaomi.com'
-        self._headers['Referer'] = 'https://account.xiaomi.com/pass/serviceLogin?sid%3Di.mi.com&sid=i.mi.com&_locale=zh_CN&_snsNone=true'
-        self._headers['Cookie'] = 'pass_trace={};'.format(self._cookies['pass_trace'])
+    async def _serviceLoginAuth2(self, session, captCode=None, allow_2fa: bool = True):
+        """执行服务登录认证，返回 LOGIN_*."""
+        if self._sign is True and self._serviceLoginAuth2_json.get("ssecurity"):
+            return LOGIN_OK
 
-        auth_post_data = {'_json': 'true',
-                          '_sign': self._sign,
-                          'callback': 'https://i.mi.com/sts',
-                          'hash': hashlib.md5(self._password.encode('utf-8')).hexdigest().upper(),
-                          'qs': '%3Fsid%253Di.mi.com%26sid%3Di.mi.com%26_locale%3Dzh_CN%26_snsNone%3Dtrue',
-                          'serviceParam': '{"checkSafePhone":false}',
-                          'sid': 'i.mi.com',
-                          'user': self._username}
+        url = 'https://account.xiaomi.com/pass/serviceLoginAuth2'
+        headers = {
+            **self._headers,
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': '*/*',
+            'Origin': 'https://account.xiaomi.com',
+            'Referer': 'https://account.xiaomi.com/pass/serviceLogin?sid=i.mi.com&_locale=zh_CN',
+        }
+
+        auth_post_data = {
+            '_json': 'true',
+            '_sign': self._sign,
+            'callback': self._login_callback or 'https://i.mi.com/sts',
+            'hash': hashlib.md5(self._password.encode('utf-8')).hexdigest().upper(),
+            'qs': self._login_qs or '%3Fsid%3Di.mi.com',
+            'sid': 'i.mi.com',
+            'user': self._username,
+        }
         try:
+            cookies = dict(self._cookies)
+            cookies.setdefault("deviceId", self._device_id)
+            cookies.setdefault("sdkVersion", "accountsdk-18.8.15")
             if captCode is not None:
                 url = 'https://account.xiaomi.com/pass/serviceLoginAuth2?_dc={}'.format(
                     int(round(time.time() * 1000)))
                 auth_post_data['captCode'] = captCode
-                self._headers['Cookie'] = self._headers['Cookie'] + \
-                                          '; ick={}'.format(self._cookies['ick'])
-            
+                if self._cookies.get('ick'):
+                    cookies['ick'] = self._cookies['ick']
+
             _LOGGER.debug("执行服务登录认证")
             with async_timeout.timeout(15):
-                r = await session.post(url, headers=self._headers, data=auth_post_data, cookies=self._cookies)
-            
-            if not r.cookies.get('passToken'):
-                _LOGGER.warning("登录认证失败，未获取到passToken")
-                return False
-                
-            self._cookies['pwdToken'] = r.cookies.get('passToken').value
-            self._serviceLoginAuth2_json = json.loads((await r.text())[11:])
+                r = await session.post(url, headers=headers, data=auth_post_data, cookies=cookies)
+
+            resp = self._parse_xiaomi_json(await r.text())
+            self._serviceLoginAuth2_json = resp
+
+            pass_token = resp.get('passToken')
+            if not pass_token and r.cookies.get('passToken'):
+                pass_token = r.cookies.get('passToken').value
+            if pass_token:
+                self._pass_token = pass_token
+                self._cookies['pwdToken'] = pass_token
+                self._cookies['passToken'] = pass_token
+                self.token_updated = True
+            if resp.get('userId'):
+                self.userId = str(resp['userId'])
+
+            if resp.get('notificationUrl'):
+                notify = resp['notificationUrl']
+                if notify.startswith('/'):
+                    notify = 'https://account.xiaomi.com' + notify
+                if not allow_2fa:
+                    _LOGGER.warning(
+                        "运行中需要二次验证，已跳过自动发码。请删除集成后重新添加并完成验证码"
+                    )
+                    return LOGIN_NEED_VERIFY
+                if await self._start_verify(session, notify):
+                    return LOGIN_NEED_VERIFY
+                _LOGGER.warning("二次验证初始化失败，链接: %s", notify)
+                return LOGIN_FAIL
+
+            if resp.get('captchaUrl'):
+                _LOGGER.warning("登录需要图形验证码: %s", resp.get('captchaUrl'))
+                return LOGIN_FAIL
+
+            if not resp.get('ssecurity') or not resp.get('location'):
+                _LOGGER.warning(
+                    "登录认证失败: code=%s desc=%s",
+                    resp.get('code'),
+                    resp.get('description') or resp.get('desc'),
+                )
+                return LOGIN_INVALID
+
             _LOGGER.debug("服务登录认证成功")
-            return True
+            return LOGIN_OK
         except Exception as e:
             _LOGGER.warning("服务登录认证时出错: %s", str(e))
+            return LOGIN_FAIL
+
+    async def _start_verify(self, session, notification_url: str) -> bool:
+        list_url = notification_url
+        if "/fe/service/identity/authStart" in list_url:
+            list_url = list_url.replace("/fe/service/identity/authStart", "/identity/list")
+        elif "/identity/authStart" in list_url:
+            list_url = list_url.replace("/identity/authStart", "/identity/list")
+        try:
+            with async_timeout.timeout(15):
+                r = await session.get(list_url, headers=self._headers)
+            resp = self._parse_xiaomi_json(await r.text())
+            if resp.get("code") != 2:
+                _LOGGER.warning("获取验证方式失败: %s", resp)
+                return False
+            flag = resp.get("flag")
+            if flag not in (FLAG_PHONE, FLAG_EMAIL):
+                _LOGGER.warning("不支持的验证方式 flag=%s", flag)
+                return False
+            identity_session = r.cookies.get("identity_session")
+            if not identity_session:
+                _LOGGER.warning("未获取到 identity_session")
+                return False
+            identity_session = identity_session.value
+            key = "Phone" if flag == FLAG_PHONE else "Email"
+            with async_timeout.timeout(15):
+                r2 = await session.get(
+                    f"https://account.xiaomi.com/identity/auth/verify{key}",
+                    cookies={"identity_session": identity_session},
+                    params={"_flag": flag, "_json": "true"},
+                    headers=self._headers,
+                )
+            res2 = self._parse_xiaomi_json(await r2.text())
+            if res2.get("code") != 0:
+                _LOGGER.warning("获取验证目标失败: %s", res2)
+                return False
+            masked = res2.get(f"masked{key}") or ""
+            with async_timeout.timeout(15):
+                r3 = await session.post(
+                    f"https://account.xiaomi.com/identity/auth/send{key}Ticket",
+                    cookies={"identity_session": identity_session},
+                    data={"retry": 0, "icode": "", "_json": "true"},
+                    headers=self._headers,
+                )
+            res3 = self._parse_xiaomi_json(await r3.text())
+            if res3.get("code") != 0:
+                _LOGGER.warning("发送验证码失败: %s", res3)
+                return False
+            self._verify_flag = flag
+            self._identity_session = identity_session
+            self.verify_target = masked
+            _LOGGER.info("已向 %s 发送验证码", masked)
+            return True
+        except Exception as e:
+            _LOGGER.warning("启动二次验证失败: %s", str(e))
             return False
 
-    async def _login_miai(self, session):
-        """登录小米AI服务."""
+    def _cookie_from_response(self, response, name: str) -> str | None:
+        morsel = response.cookies.get(name)
+        if morsel:
+            return morsel.value
+        for hist in response.history:
+            morsel = hist.cookies.get(name)
+            if morsel:
+                return morsel.value
+        return None
+
+    def _cookie_from_jar(self, session, name: str) -> str | None:
         try:
-            serviceToken = "nonce={}&{}".format(
-                self._serviceLoginAuth2_json['nonce'], self._serviceLoginAuth2_json['ssecurity'])
-            serviceToken_sha1 = hashlib.sha1(serviceToken.encode('utf-8')).digest()
-            base64_serviceToken = base64.b64encode(serviceToken_sha1)
-            loginmiai_header = {'User-Agent': 'MISoundBox/1.4.0,iosPassportSDK/iOS-3.2.7 iOS/11.2.5',
-                                'Accept-Language': 'zh-cn', 'Connection': 'keep-alive'}
-            url = self._serviceLoginAuth2_json['location'] + \
-                  "&clientSign=" + parse.quote(base64_serviceToken.decode())
-            
-            _LOGGER.debug("开始登录小米AI服务")
-            with async_timeout.timeout(15):
-                r = await session.get(url, headers=loginmiai_header)
-            
-            if r.status == 200 and r.cookies.get('serviceToken') and r.cookies.get('userId'):
-                self._Service_Token = r.cookies.get('serviceToken').value
-                self.userId = r.cookies.get('userId').value
-                _LOGGER.debug("登录小米AI服务成功，用户ID: %s", self.userId)
-                return True
-            else:
-                _LOGGER.warning("登录小米AI服务失败，状态码: %s", r.status)
-                return False
-        except Exception as e:
-            _LOGGER.warning("登录小米AI服务时出错: %s", str(e))
-            return False
+            for cookie in session.cookie_jar:
+                if cookie.key == name and cookie.value:
+                    return cookie.value
+        except Exception:
+            pass
+        return None
 
     async def _get_device_info(self, session):
         """获取设备信息."""
@@ -555,36 +1019,22 @@ class XiaomiCloudDataUpdateCoordinator(DataUpdateCoordinator):
                         
             # 处理登录状态
             if not self.login_result:
-                # 用户未登录或登录失效，执行登录流程
                 _LOGGER.info("开始执行登录流程")
                 session.cookie_jar.clear()
-                
-                # 按顺序执行登录步骤
-                if not await self._get_sign(session):
-                    _LOGGER.warning("获取sign失败")
+
+                login_status = await self._relogin(session, allow_2fa=False)
+                if login_status == LOGIN_NEED_VERIFY:
+                    _LOGGER.warning(
+                        "会话失效且需要二次验证，请重新添加集成完成验证码（后台不会自动发码）"
+                    )
                     return self._last_devices_data or []
-                
-                if not await self._serviceLoginAuth2(session):
+                if login_status != LOGIN_OK:
                     _LOGGER.warning('登录验证失败')
                     return self._last_devices_data or []
-                
-                if self._serviceLoginAuth2_json.get('code', -1) != 0:
-                    _LOGGER.warning('登录验证返回错误码: %s', self._serviceLoginAuth2_json.get('code', -1))
-                    return self._last_devices_data or []
-                
-                # 登录成功，执行miai登录
-                if not await self._login_miai(session):
-                    _LOGGER.warning('登录小米云失败')
-                    return self._last_devices_data or []
-                
-                if not await self._get_device_info(session):
-                    _LOGGER.warning('获取设备信息失败')
-                    return self._last_devices_data or []
-                
+
                 _LOGGER.info("登录成功，获取到%d个设备信息", len(self._device_info))
                 self.login_result = True
-                
-                # 重新执行原服务请求（如果有）
+
                 if self.service in ["noise", "lost", "clipboard", "find"]:
                     _LOGGER.info("重新尝试执行服务: %s", self.service)
                     if self.service == "noise":
@@ -604,15 +1054,8 @@ class XiaomiCloudDataUpdateCoordinator(DataUpdateCoordinator):
             if not find_result and not self.login_result:
                 _LOGGER.info("查找设备失败，尝试重新登录")
                 session.cookie_jar.clear()
-                
-                # 尝试执行完整的登录流程
-                login_success = (await self._get_sign(session) and 
-                                await self._serviceLoginAuth2(session) and 
-                                self._serviceLoginAuth2_json.get('code', -1) == 0 and
-                                await self._login_miai(session) and
-                                await self._get_device_info(session))
-                
-                if login_success:
+                login_status = await self._relogin(session, allow_2fa=False)
+                if login_status == LOGIN_OK:
                     self.login_result = True
                     _LOGGER.info("重新登录成功，再次尝试查找设备")
                     find_result = await self._send_find_device_command(session)
@@ -641,21 +1084,54 @@ class XiaomiCloudDataUpdateCoordinator(DataUpdateCoordinator):
                 if self._device_info:
                     _LOGGER.info("尝试创建基本设备信息...")
                     basic_devices = []
+                    last_by_imei = {
+                        str(item.get("imei")): item
+                        for item in (self._last_devices_data or [])
+                        if item.get("imei")
+                    }
                     for vin in self._device_info:
-                        basic_devices.append({
-                            "imei": vin.get("imei", ""),
+                        imei = vin.get("imei", "")
+                        basic = {
+                            "imei": imei,
                             "model": vin.get("model", "未知设备"),
                             "version": vin.get("version", "未知版本"),
                             "device_status": "unknown"
-                        })
+                        }
+                        prev = last_by_imei.get(str(imei)) or {}
+                        for key in (
+                            "device_lat",
+                            "device_lon",
+                            "device_accuracy",
+                            "device_location_update_time",
+                            "coordinate_type",
+                            "device_power",
+                        ):
+                            if prev.get(key) is not None:
+                                basic[key] = prev[key]
+                        basic_devices.append(basic)
                     _LOGGER.debug("创建了%d个基本设备信息对象", len(basic_devices))
-                    # 保存基本设备数据以便恢复
-                    self._last_devices_data = basic_devices
                     return basic_devices
                 return self._last_devices_data or []
             else:
                 _LOGGER.info(f"获取设备位置成功，返回{len(location_data)}个设备数据")
-                # 保存获取到的设备数据
+                last_by_imei = {
+                    str(item.get("imei")): item
+                    for item in (self._last_devices_data or [])
+                    if item.get("imei")
+                }
+                for item in location_data:
+                    if item.get("device_lat") is not None:
+                        continue
+                    prev = last_by_imei.get(str(item.get("imei"))) or {}
+                    for key in (
+                        "device_lat",
+                        "device_lon",
+                        "device_accuracy",
+                        "device_location_update_time",
+                        "coordinate_type",
+                    ):
+                        if item.get(key) is None and prev.get(key) is not None:
+                            item[key] = prev[key]
                 self._last_devices_data = location_data
                 devices_data = location_data
 

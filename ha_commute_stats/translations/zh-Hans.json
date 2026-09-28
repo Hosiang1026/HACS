@@ -130,6 +130,12 @@
     },
     "announce_join": {
       "message": "{title}。{commute}"
+    },
+    "announce_test": {
+      "message": "这是一条测试播报"
+    },
+    "announce_test_button": {
+      "message": "测试播报"
     }
   },
   "config": {
@@ -247,6 +253,7 @@
           "indoor_sensor": "室内人数传感器",
           "notify": "通知动作",
           "announce": "播报设备",
+          "test_announce": "测试播报",
           "amap_key": "高德Key",
           "holiday_sensor": "今日类型"
         }
@@ -450,13 +457,15 @@
       "no_work_people": "没有配置公司区域的人员"
     },
     "error": {
-      "already_person": "该人员已添加"
+      "already_person": "该人员已添加",
+      "announce_empty": "未选择播报设备",
+      "announce_failed": "播报失败"
     }
   },
   "common": {
     "clock_in_title": "{name}上班通知",
     "clock_out_title": "{name}下班通知",
-    "unknown": "unknown",
+    "unknown": "未知",
     "hours_minutes": "{hours}小时{minutes}分钟",
     "days_hours_minutes": "{days}天{hours}小时{minutes}分钟",
     "minutes": "{minutes}分钟",

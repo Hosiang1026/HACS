@@ -1,0 +1,14 @@
+{
+  "domain": "honor_cloud",
+  "name": "荣耀云服务",
+  "version": "0.1.0",
+  "requirements": ["aiohttp>=3.9.0"],
+  "config_flow": true,
+  "iot_class": "cloud_polling",
+  "integration_type": "service",
+  "codeowners": [],
+  "documentation": "",
+  "issue_tracker": "",
+  "homeassistant": "2024.7.0",
+  "loggers": ["custom_components.honor_cloud"]
+}

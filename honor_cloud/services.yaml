@@ -1,0 +1,110 @@
+force_sync:
+  name: 强制同步设备位置
+  description: |
+    立即触发一次设备位置同步，忽略轮询间隔。
+
+    - normal 模式：被动同步（读取缓存定位，快速返回）
+    - active 模式：主动定位（触发荣耀云 locate + 轮询结果，获取实时坐标）
+
+    注意：为防止荣耀云风控，active 模式有 60 秒限频保护。
+  fields:
+    mode:
+      name: 同步模式
+      description: |
+        - normal：普通模式，读取缓存定位（默认）
+        - active：主动模式，触发实时定位（调用荣耀云 locate 接口）
+      required: false
+      default: normal
+      example: normal
+      selector:
+        select:
+          options:
+            - label: 普通模式（缓存定位）
+              value: normal
+            - label: 主动模式（实时定位）
+              value: active
+
+force_locate:
+  name: 主动获取实时位置
+  description: |
+    触发完整主动定位链路：
+    1. 向荣耀云发送 locate 请求（每台设备）
+    2. 轮询 queryLocateResult（最多 15 次，间隔 2s）
+    3. 完成后立即刷新所有实体
+
+    适用于需要立刻获得最新坐标的场景。
+    共享设备同样支持。
+
+ring:
+  name: 响铃（找手机）
+  description: |
+    触发指定设备响铃（荣耀云查找设备 → 响铃功能）。
+
+    - 同一设备 30 秒内只能触发一次，防止荣耀风控。
+    - stop 功能暂未支持（HAR 中无对应端点样本）。
+  fields:
+    device_id:
+      name: 设备 ID
+      description: 荣耀云设备 ID（可在设备追踪器实体属性中查看 device_id 字段）
+      required: true
+      example: "7B165F7EE696F99BBEABC3AFD36AB3DA143E3455816319A8EDFB315FA2D35B79"
+      selector:
+        text:
+    action:
+      name: 动作
+      description: start = 开始响铃（默认）；stop = 停止响铃（暂不支持）
+      required: false
+      default: start
+      example: start
+      selector:
+        select:
+          options:
+            - label: 开始响铃
+              value: start
+            - label: 停止响铃（暂不支持）
+              value: stop
+
+lost:
+  name: 丢失模式
+  description: |
+    开启或关闭设备丢失模式（远程锁定 + 锁屏留言/联系电话）。
+
+    开启前请先在设备的文本实体中填写：锁屏密码（4-16位数字）、丢失留言、联系电话。
+    若设备已有锁屏密码，锁屏密码可留空。
+  fields:
+    device_id:
+      name: 设备 ID
+      description: 荣耀云设备 ID
+      required: true
+      selector:
+        text:
+    action:
+      name: 动作
+      description: start = 开启丢失模式；stop = 关闭丢失模式
+      required: false
+      default: start
+      selector:
+        select:
+          options:
+            - label: 开启丢失模式
+              value: start
+            - label: 关闭丢失模式
+              value: stop
+    password:
+      name: 锁屏密码
+      description: 4-16 位数字；留空则使用文本实体中的值
+      required: false
+      selector:
+        text:
+    message:
+      name: 丢失留言
+      description: 显示在锁屏上的留言；留空则使用文本实体中的值
+      required: false
+      selector:
+        text:
+    phone:
+      name: 联系电话
+      description: 联系电话；留空则使用文本实体中的值
+      required: false
+      selector:
+        text:

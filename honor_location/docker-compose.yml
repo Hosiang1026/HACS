@@ -1,0 +1,16 @@
+services:
+  honor_location:
+    image: honor_location
+    build: .
+    container_name: honor_location
+    ports:
+      - "8001:8080"
+    volumes:
+      - honor_data:/data
+    environment:
+      - STORAGE_STATE_PATH=/data
+      - DEBUG_MODE=0
+    restart: unless-stopped
+
+volumes:
+  honor_data:

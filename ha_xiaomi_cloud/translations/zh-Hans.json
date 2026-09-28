@@ -9,6 +9,13 @@
           "username": "账号",
           "password": "密码"
         }
+      },
+      "verify": {
+        "title": "二次验证",
+        "description": "验证码已发送至 {target}，请输入收到的验证码（不要在小米网页上输入）",
+        "data": {
+          "verify_code": "验证码"
+        }
       }
     },
     "abort": {
@@ -16,6 +23,8 @@
     },
     "error": {
       "invalid_auth": "账号或密码错误",
+      "invalid_code": "验证码错误",
+      "login_failed": "登录失败，请重试",
       "no_device": "账号下未找到设备"
     }
   },
@@ -31,31 +40,14 @@
       "locate": {
         "title": "定位设置",
         "data": {
-          "max_interval": "平时刷新间隔（分钟）",
-          "enable_low_battery_polling": "启用低电量快速更新",
-          "low_battery_threshold": "低电量阈值 (%)",
-          "low_battery_interval": "低电量更新间隔 (分钟)",
-          "period_weekdays": "高峰/低谷仅工作日（周一至周五）",
-          "peak_enabled": "启用高峰时段",
-          "peak_start_1": "高峰1 开始",
-          "peak_end_1": "高峰1 结束",
-          "peak_start_2": "高峰2 开始",
-          "peak_end_2": "高峰2 结束",
-          "peak_start_3": "高峰3 开始",
-          "peak_end_3": "高峰3 结束",
-          "peak_interval": "高峰刷新间隔（分钟）",
-          "offpeak_enabled": "启用低谷时段",
-          "offpeak_start_1": "低谷1 开始",
-          "offpeak_end_1": "低谷1 结束",
-          "offpeak_start_2": "低谷2 开始",
-          "offpeak_end_2": "低谷2 结束",
-          "offpeak_interval": "低谷刷新间隔（分钟）"
+          "max_interval": "平时刷新间隔（分钟）"
         }
       },
       "amap": {
         "title": "高德设置",
         "data": {
-          "commute_enabled": "是否启用",
+          "amap_enabled": "启用高德调用",
+          "commute_enabled": "是否启用通勤",
           "commute_zones": "家区域",
           "activity_entity": "活动状态",
           "amap_key": "高德 Key"
@@ -66,7 +58,7 @@
       }
     },
     "error": {
-      "invalid_windows": "请选择开始和结束时间",
+      "amap_required": "启用通勤需先开启高德调用",
       "commute_key": "请填写高德 Key",
       "commute_zones": "请选择至少一个家区域"
     }

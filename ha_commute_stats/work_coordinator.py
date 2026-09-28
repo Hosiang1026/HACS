@@ -20,6 +20,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 from homeassistant.util import slugify
 
+from .announce import async_announce, speech_text
 from .const import (
     CONF_ACTIVITY_SENSOR,
     CONF_ADDR_SENSOR,
@@ -151,28 +152,107 @@ def _fmt_km(km: float, tr: dict[str, str]) -> str:
     return _nget(tr, "km_float", "{km} km", km=f"{km:.1f}")
 
 
-def _amap_num(value: Any) -> float:
-    if isinstance(value, (int, float)):
+_A = 6378245.0
+_EE = 0.00669342162296594323
+
+
+def _wgs84_to_gcj02(lon: float, lat: float) -> tuple[float, float]:
+    if not (72.004 <= lon <= 137.8347 and 0.8293 <= lat <= 55.8271):
+        return lon, lat
+    x, y = lon - 105.0, lat - 35.0
+    dlat = (
+        -100.0
+        + 2.0 * x
+        + 3.0 * y
+        + 0.2 * y * y
+        + 0.1 * x * y
+        + 0.2 * math.sqrt(abs(x))
+    )
+    dlat += (20.0 * math.sin(6.0 * x * math.pi) + 20.0 * math.sin(2.0 * x * math.pi)) * 2.0 / 3.0
+    dlat += (20.0 * math.sin(y * math.pi) + 40.0 * math.sin(y / 3.0 * math.pi)) * 2.0 / 3.0
+    dlat += (160.0 * math.sin(y / 12.0 * math.pi) + 320.0 * math.sin(y * math.pi / 30.0)) * 2.0 / 3.0
+    dlon = 300.0 + x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * math.sqrt(abs(x))
+    dlon += (20.0 * math.sin(6.0 * x * math.pi) + 20.0 * math.sin(2.0 * x * math.pi)) * 2.0 / 3.0
+    dlon += (20.0 * math.sin(x * math.pi) + 40.0 * math.sin(x / 3.0 * math.pi)) * 2.0 / 3.0
+    dlon += (150.0 * math.sin(x / 12.0 * math.pi) + 300.0 * math.sin(x / 30.0 * math.pi)) * 2.0 / 3.0
+    rad = lat / 180.0 * math.pi
+    magic = 1 - _EE * math.sin(rad) ** 2
+    sqrtm = math.sqrt(magic)
+    dlat = (dlat * 180.0) / ((_A * (1 - _EE)) / (magic * sqrtm) * math.pi)
+    dlon = (dlon * 180.0) / (_A / sqrtm * math.cos(rad) * math.pi)
+    return lon + dlon, lat + dlat
+
+
+def _amap_num(value: Any) -> float | None:
+    if value is None or value == [] or value == "" or isinstance(value, (bool, dict, list)):
+        return None
+    try:
         return float(value)
-    if isinstance(value, str) and value:
-        try:
-            return float(value)
-        except ValueError:
-            return 0
-    return 0
+    except (TypeError, ValueError):
+        return None
+
+
+def _amap_items(value: Any) -> list[Any]:
+    if not value:
+        return []
+    if isinstance(value, list):
+        return [x for x in value if isinstance(x, dict)]
+    if isinstance(value, dict):
+        return [value]
+    return []
 
 
 def _amap_first_path(data: dict[str, Any] | None) -> dict[str, Any] | None:
     if not data or str(data.get("status")) != "1":
         return None
-    paths = ((data.get("route") or {}) if isinstance(data.get("route"), dict) else {}).get(
-        "paths"
-    )
-    if isinstance(paths, dict):
-        return paths
-    if isinstance(paths, list) and paths and isinstance(paths[0], dict):
-        return paths[0]
-    return None
+    route = data.get("route")
+    if isinstance(route, list):
+        route = route[0] if route else None
+    if not isinstance(route, dict):
+        return None
+    paths = _amap_items(route.get("paths"))
+    return paths[0] if paths else None
+
+
+def _amap_path_meters_seconds(path: dict[str, Any]) -> tuple[float | None, int | None]:
+    cost = path.get("cost") if isinstance(path.get("cost"), dict) else None
+    duration = _amap_num((cost or {}).get("duration"))
+    if duration is None:
+        duration = _amap_num(path.get("duration"))
+    if duration is None:
+        total = 0.0
+        found = False
+        for step in _amap_items(path.get("steps")):
+            sc = step.get("cost") if isinstance(step.get("cost"), dict) else None
+            sec = _amap_num((sc or {}).get("duration"))
+            if sec is None:
+                sec = _amap_num(step.get("duration"))
+            if sec is not None:
+                total += sec
+                found = True
+        duration = total if found else None
+    meters = _amap_num(path.get("distance"))
+    if meters is None:
+        total = 0.0
+        found = False
+        for step in _amap_items(path.get("steps")):
+            step_m = _amap_num(step.get("step_distance"))
+            if step_m is None:
+                step_m = _amap_num(step.get("distance"))
+            if step_m is not None:
+                total += step_m
+                found = True
+        meters = total if found else None
+    if meters is None:
+        return None, None
+    return meters, int(duration) if duration is not None else None
+
+
+def _estimate_minutes(km: float, mode: str) -> int:
+    if km <= 0:
+        return 0
+    speed = 40.0 if mode == TRAVEL_DRIVING else 15.0
+    return max(int(km / speed * 60), 1)
 
 
 def _haversine_km(lng1: float, lat1: float, lng2: float, lat2: float) -> float:
@@ -405,6 +485,15 @@ class WorkTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self, origin: tuple[float, float] | None = None
     ) -> tuple[float, float] | None:
         zones = self._home_zones_lnglat()
+        if not zones:
+            loc = _latlon(self.hass.states.get("zone.home"))
+            if loc:
+                zones = [loc]
+            else:
+                lat = self.hass.config.latitude
+                lon = self.hass.config.longitude
+                if lat is not None and lon is not None:
+                    zones = [(float(lon), float(lat))]
         if not zones:
             return None
         if origin is None:
@@ -688,7 +777,7 @@ class WorkTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             )
         body = message.replace("\\n", "\n").strip()
         await self._send_notify(title, body)
-        await self._broadcast(body)
+        await self._broadcast(speech_text(title, body))
 
     def _person_lnglat(self) -> tuple[float, float] | None:
         eid = self.cfg(CONF_PERSON)
@@ -744,29 +833,36 @@ class WorkTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             _LOGGER.warning("amap request failed: %s", url)
             return None
 
-    async def _amap_convert(
-        self, key: str, points: list[tuple[float, float]]
-    ) -> list[tuple[float, float] | None]:
-        locs = "|".join(f"{lng:.6f},{lat:.6f}" for lng, lat in points)
-        data = await self._amap_get(
-            "https://restapi.amap.com/v3/assistant/coordinate/convert",
-            {"key": key, "coordsys": "gps", "output": "json", "locations": locs},
+    async def _amap_route(
+        self,
+        key: str,
+        mode: str,
+        src: tuple[float, float],
+        dst: tuple[float, float],
+    ) -> tuple[float, int] | None:
+        endpoint = (
+            "https://restapi.amap.com/v5/direction/driving"
+            if mode == TRAVEL_DRIVING
+            else "https://restapi.amap.com/v5/direction/electrobike"
         )
-        if not data or str(data.get("status")) != "1":
-            return [None] * len(points)
-        out: list[tuple[float, float] | None] = []
-        for chunk in str(data.get("locations") or "").split(";"):
-            parts = chunk.split(",")
-            if len(parts) < 2:
-                out.append(None)
-                continue
-            try:
-                out.append((float(parts[0]), float(parts[1])))
-            except ValueError:
-                out.append(None)
-        while len(out) < len(points):
-            out.append(None)
-        return out
+        route = await self._amap_get(
+            endpoint,
+            {
+                "key": key,
+                "origin": f"{src[0]:.6f},{src[1]:.6f}",
+                "destination": f"{dst[0]:.6f},{dst[1]:.6f}",
+                "show_fields": "cost",
+            },
+        )
+        path = _amap_first_path(route)
+        if not path:
+            return None
+        meters, seconds = _amap_path_meters_seconds(path)
+        if meters is None or meters <= 0:
+            return None
+        if seconds is None or seconds <= 0:
+            seconds = _estimate_minutes(meters / 1000.0, mode) * 60
+        return meters, seconds
 
     async def _refresh_location(self) -> dict[str, Any]:
         tr = await async_get_translations(
@@ -784,8 +880,7 @@ class WorkTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             }
             key = self.cfg(CONF_AMAP_KEY)
             if key and origin:
-                converted = await self._amap_convert(key, [origin])
-                src = converted[0] or origin
+                src = _wgs84_to_gcj02(*origin)
                 regeo = await self._amap_get(
                     "https://restapi.amap.com/v3/geocode/regeo",
                     {"key": key, "location": f"{src[0]:.6f},{src[1]:.6f}"},
@@ -819,9 +914,7 @@ class WorkTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         ):
             await self._write_loc(self._amap_loc)
             return self._amap_loc
-        pts = [origin] + ([dest] if dest else [])
-        converted = await self._amap_convert(key, pts)
-        src = converted[0] or origin
+        src = _wgs84_to_gcj02(*origin)
         regeo = await self._amap_get(
             "https://restapi.amap.com/v3/geocode/regeo",
             {"key": key, "location": f"{src[0]:.6f},{src[1]:.6f}"},
@@ -831,47 +924,29 @@ class WorkTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if addr and not isinstance(addr, list):
                 loc["addr"] = addr
         if dest:
-            dst = (converted[1] if len(converted) > 1 and converted[1] else dest)
-            endpoint = (
-                "https://restapi.amap.com/v5/direction/driving"
-                if mode == TRAVEL_DRIVING
-                else "https://restapi.amap.com/v5/direction/electrobike"
-            )
-            route = await self._amap_get(
-                endpoint,
-                {
-                    "key": key,
-                    "origin": f"{src[0]:.6f},{src[1]:.6f}",
-                    "destination": f"{dst[0]:.6f},{dst[1]:.6f}",
-                    "show_fields": "cost",
-                },
-            )
-            first = _amap_first_path(route)
-            if first:
-                cost = first.get("cost") if isinstance(first.get("cost"), dict) else {}
-                meters = _amap_num(first.get("distance"))
-                seconds = _amap_num(cost.get("duration"))
-                if seconds <= 0:
-                    steps = first.get("steps") if isinstance(first.get("steps"), list) else []
-                    seconds = sum(
-                        _amap_num((s.get("cost") or {}).get("duration"))
-                        if isinstance(s, dict) and isinstance(s.get("cost"), dict)
-                        else 0
-                        for s in steps
-                    )
-                minutes = int(seconds / 60)
-                if meters > 0:
-                    km = int(meters / 10) / 100
-                    loc["distance"] = km
-                    if minutes > 0:
-                        loc["time"] = minutes
-                    loc["commute"] = _nget(
-                        tr,
-                        "commute",
-                        "Home distance: {dist} Travel time: {time}",
-                        dist=_fmt_km(km, tr),
-                        time=_fmt_minutes(minutes, tr),
-                    )
+            dst = _wgs84_to_gcj02(*dest)
+            route_mode = mode or TRAVEL_DRIVING
+            result = await self._amap_route(key, route_mode, src, dst)
+            if result:
+                meters, seconds = result
+                km = int(meters / 10) / 100
+                if km <= 0:
+                    km = round(meters / 1000.0, 2)
+                minutes = max(int(seconds / 60), 0)
+            else:
+                km = round(_haversine_km(origin[0], origin[1], dest[0], dest[1]) * 1.3, 1)
+                minutes = _estimate_minutes(km, route_mode)
+            if km > 0:
+                loc["distance"] = km
+                loc["time"] = minutes
+                loc["commute"] = _nget(
+                    tr,
+                    "commute",
+                    "Home distance: {dist} Travel time: {time}",
+                    dist=_fmt_km(km, tr),
+                    time=_fmt_minutes(minutes, tr),
+                )
+                mode = route_mode
         if loc["addr"] != unknown and loc["distance"] is not None:
             self._amap_origin = origin
             self._amap_dest = dest
@@ -1048,33 +1123,7 @@ class WorkTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 _LOGGER.exception("notify failed: %s", action)
 
     async def _broadcast(self, text: str) -> None:
-        for eid in _as_list(self.cfg(CONF_ANNOUNCE)):
-            if not isinstance(eid, str) or "." not in eid:
-                continue
-            domain = eid.split(".", 1)[0]
-            if domain in ("text", "input_text"):
-                await self.hass.services.async_call(
-                    domain, "set_value", {"entity_id": eid, "value": text}, blocking=False
-                )
-            elif domain == "media_player":
-                if self.hass.services.has_service("xiaomi_miot", "intelligent_speaker"):
-                    await self.hass.services.async_call(
-                        "xiaomi_miot",
-                        "intelligent_speaker",
-                        {"entity_id": eid, "text": text, "execute": False, "silent": False},
-                        blocking=False,
-                    )
-                elif self.hass.services.has_service("tts", "speak"):
-                    tts_ids = self.hass.states.async_entity_ids("tts")
-                    if not tts_ids:
-                        continue
-                    await self.hass.services.async_call(
-                        "tts",
-                        "speak",
-                        {"media_player_entity_id": eid, "message": text},
-                        target={"entity_id": tts_ids[0]},
-                        blocking=False,
-                    )
+        await async_announce(self.hass, self.cfg(CONF_ANNOUNCE), text)
 
     async def async_set_start_time(self, value: str) -> None:
         self._data["start_time"] = value

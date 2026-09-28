@@ -9,6 +9,13 @@
           "username": "Username",
           "password": "Password"
         }
+      },
+      "verify": {
+        "title": "Two-factor verification",
+        "description": "A code was sent to {target}. Enter it here (do not enter it on Xiaomi website).",
+        "data": {
+          "verify_code": "Verification code"
+        }
       }
     },
     "abort": {
@@ -16,6 +23,8 @@
     },
     "error": {
       "invalid_auth": "Invalid username or password",
+      "invalid_code": "Invalid verification code",
+      "login_failed": "Login failed, please retry",
       "no_device": "No devices found in account"
     }
   },
@@ -31,31 +40,14 @@
       "locate": {
         "title": "Locate settings",
         "data": {
-          "max_interval": "Normal update interval (minutes)",
-          "enable_low_battery_polling": "Enable low battery fast polling",
-          "low_battery_threshold": "Low battery threshold (%)",
-          "low_battery_interval": "Low battery update interval (minutes)",
-          "period_weekdays": "Peak/off-peak on weekdays only (Mon–Fri)",
-          "peak_enabled": "Enable peak updates",
-          "peak_start_1": "Peak 1 start",
-          "peak_end_1": "Peak 1 end",
-          "peak_start_2": "Peak 2 start",
-          "peak_end_2": "Peak 2 end",
-          "peak_start_3": "Peak 3 start",
-          "peak_end_3": "Peak 3 end",
-          "peak_interval": "Peak update interval (minutes)",
-          "offpeak_enabled": "Enable off-peak updates",
-          "offpeak_start_1": "Off-peak 1 start",
-          "offpeak_end_1": "Off-peak 1 end",
-          "offpeak_start_2": "Off-peak 2 start",
-          "offpeak_end_2": "Off-peak 2 end",
-          "offpeak_interval": "Off-peak update interval (minutes)"
+          "max_interval": "Update interval (minutes)"
         }
       },
       "amap": {
         "title": "Amap settings",
         "data": {
-          "commute_enabled": "Enabled",
+          "amap_enabled": "Enable Amap calls",
+          "commute_enabled": "Enable commute",
           "commute_zones": "Home zones",
           "activity_entity": "Activity status",
           "amap_key": "Amap key"
@@ -66,7 +58,7 @@
       }
     },
     "error": {
-      "invalid_windows": "Select start and end time",
+      "amap_required": "Enable Amap calls before commute",
       "commute_key": "Enter Amap key",
       "commute_zones": "Select at least one home zone"
     }

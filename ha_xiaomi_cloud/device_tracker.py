@@ -10,7 +10,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .account import XiaomiAccount, XiaomiDevice, apply_suggested_entity_id
+from .account import XiaomiAccount, XiaomiDevice, apply_suggested_entity_id, gcj02_to_wgs84
 from .const import DOMAIN
 
 
@@ -75,11 +75,21 @@ class XiaomiTrackerEntity(TrackerEntity):
 
     @property
     def latitude(self) -> float | None:
-        return self._device.latitude
+        lat = self._device.latitude
+        lon = self._device.longitude
+        if lat is None or lon is None:
+            return None
+        _, wgs_lat = gcj02_to_wgs84(lon, lat)
+        return wgs_lat
 
     @property
     def longitude(self) -> float | None:
-        return self._device.longitude
+        lat = self._device.latitude
+        lon = self._device.longitude
+        if lat is None or lon is None:
+            return None
+        wgs_lon, _ = gcj02_to_wgs84(lon, lat)
+        return wgs_lon
 
     @property
     def location_accuracy(self) -> int:
@@ -95,7 +105,9 @@ class XiaomiTrackerEntity(TrackerEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return self._device.extra_state_attributes
+        attrs = dict(self._device.extra_state_attributes)
+        attrs["coordinate_type"] = "wgs84"
+        return attrs
 
     @property
     def device_info(self) -> DeviceInfo:

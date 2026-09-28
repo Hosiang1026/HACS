@@ -611,6 +611,7 @@ class IcloudAccount:
                 self._icloud_dir.path,
                 with_family=self._with_family,
                 china_mainland=True,
+                accept_terms=True,
             )
 
             if self.api.requires_2fa or self.api.requires_2sa:

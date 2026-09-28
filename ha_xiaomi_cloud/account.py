@@ -24,49 +24,42 @@ from .DataUpdateCoordinator import XiaomiCloudDataUpdateCoordinator
 from .const import (
     ACTIVITY_BIKE,
     ACTIVITY_DRIVE,
+    AMAP_DAILY_LIMIT,
     COMMUTE_BIKE_MAX_KM,
     COMMUTE_MODE_BICYCLING,
     COMMUTE_MODE_DRIVING,
+    CONF_AMAP_ENABLED,
     CONF_AMAP_KEY,
     CONF_COMMUTE_ENABLED,
     CONF_COMMUTE_ZONES,
     CONF_ACTIVITY_ENTITY,
-    CONF_LOW_BATTERY_INTERVAL,
-    CONF_LOW_BATTERY_POLLING,
-    CONF_LOW_BATTERY_THRESHOLD,
     CONF_MAX_INTERVAL,
-    CONF_OFFPEAK_ENABLED,
-    CONF_OFFPEAK_INTERVAL,
-    CONF_OFFPEAK_WINDOWS,
-    CONF_PEAK_ENABLED,
-    CONF_PEAK_INTERVAL,
-    CONF_PEAK_WINDOWS,
-    CONF_PERIOD_WEEKDAYS,
     CONF_UPDATE_INTERVAL,
     DEFAULT_ACTIVITY_ENTITY,
+    DEFAULT_AMAP_ENABLED,
     DEFAULT_COMMUTE_ENABLED,
     DEFAULT_COMMUTE_ZONES,
-    DEFAULT_LOW_BATTERY_INTERVAL,
-    DEFAULT_LOW_BATTERY_POLLING,
-    DEFAULT_LOW_BATTERY_THRESHOLD,
     DEFAULT_MAX_INTERVAL,
-    DEFAULT_OFFPEAK_ENABLED,
-    DEFAULT_OFFPEAK_INTERVAL,
-    DEFAULT_OFFPEAK_WINDOWS,
-    DEFAULT_PEAK_ENABLED,
-    DEFAULT_PEAK_INTERVAL,
-    DEFAULT_PEAK_WINDOWS,
-    DEFAULT_PERIOD_WEEKDAYS,
     DOMAIN,
     HOME_EXIT_BUFFER_M,
     activity_entities,
     default_options,
-    in_windows,
-    opt_windows_text,
-    parse_windows,
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _amap_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, list):
+        for item in value:
+            text = _amap_text(item)
+            if text:
+                return text
+        return None
+    text = str(value).strip()
+    return text or None
 
 
 def device_object_slug(model: str, fallback: str) -> str:
@@ -119,6 +112,11 @@ def wgs84_to_gcj02(lon: float, lat: float) -> tuple[float, float]:
     dlat = (dlat * 180.0) / ((a * (1 - ee)) / (magic * sqrtmagic) * math.pi)
     dlon = (dlon * 180.0) / (a / sqrtmagic * math.cos(radlat) * math.pi)
     return lon + dlon, lat + dlat
+
+
+def gcj02_to_wgs84(lon: float, lat: float) -> tuple[float, float]:
+    glon, glat = wgs84_to_gcj02(lon, lat)
+    return lon * 2 - glon, lat * 2 - glat
 
 
 _AMAP_TRAFFIC_RANK = {"缓行": 1, "拥堵": 2, "严重拥堵": 3}
@@ -205,19 +203,26 @@ async def _amap_regeo_async(
             timeout=10,
         ) as resp:
             data = await resp.json()
-    except (aiohttp.ClientError, asyncio.TimeoutError, ValueError):
+    except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as err:
+        _LOGGER.warning("高德逆地理请求失败: %s", err)
         return None
     if str(data.get("status")) != "1":
+        _LOGGER.warning(
+            "高德逆地理失败: info=%s infocode=%s",
+            data.get("info"),
+            data.get("infocode"),
+        )
         return None
     geo = data.get("regeocode") or {}
     comp = geo.get("addressComponent") or {}
     pois = geo.get("pois") or []
-    poi = pois[0].get("name") if pois and isinstance(pois[0], dict) else None
+    poi = _amap_text(pois[0].get("name") if pois and isinstance(pois[0], dict) else None)
+    address = _amap_text(geo.get("formatted_address")) or poi
     return {
-        "address": geo.get("formatted_address") or poi,
+        "address": address,
         "poi": poi,
-        "city": comp.get("city") or comp.get("province"),
-        "district": comp.get("district"),
+        "city": _amap_text(comp.get("city")) or _amap_text(comp.get("province")),
+        "district": _amap_text(comp.get("district")),
     }
 
 
@@ -290,15 +295,8 @@ class XiaomiAccount:
         self._locate_count = 0
         self._amap_count = 0
         self._usage_day: str | None = None
-        self._peak_enabled = DEFAULT_PEAK_ENABLED
-        self._peak_windows: list[tuple[int, int]] = []
-        self._offpeak_enabled = DEFAULT_OFFPEAK_ENABLED
-        self._offpeak_windows: list[tuple[int, int]] = []
-        self._peak_interval = DEFAULT_PEAK_INTERVAL
-        self._offpeak_interval = DEFAULT_OFFPEAK_INTERVAL
-        self._period_weekdays = DEFAULT_PERIOD_WEEKDAYS
         self._max_interval = DEFAULT_MAX_INTERVAL
-        self._load_period_options()
+        self._load_interval_options()
         coordinator.async_add_listener(self._handle_coordinator_update)
 
     @property
@@ -349,38 +347,14 @@ class XiaomiAccount:
     def _amap_key(self) -> str:
         return str(self._opt(CONF_AMAP_KEY, "") or "").strip()
 
-    def _load_period_options(self) -> None:
+    def _amap_enabled(self) -> bool:
+        return bool(self._opt(CONF_AMAP_ENABLED, DEFAULT_AMAP_ENABLED)) and bool(
+            self._amap_key()
+        )
+
+    def _load_interval_options(self) -> None:
         self._max_interval = int(
             self._opt(CONF_MAX_INTERVAL, self._opt(CONF_UPDATE_INTERVAL, DEFAULT_MAX_INTERVAL))
-        )
-        self._peak_enabled = bool(self._opt(CONF_PEAK_ENABLED, DEFAULT_PEAK_ENABLED))
-        self._offpeak_enabled = bool(
-            self._opt(CONF_OFFPEAK_ENABLED, DEFAULT_OFFPEAK_ENABLED)
-        )
-        self._peak_windows = (
-            parse_windows(
-                opt_windows_text(
-                    self._opt(CONF_PEAK_WINDOWS, DEFAULT_PEAK_WINDOWS),
-                    DEFAULT_PEAK_WINDOWS,
-                )
-            )
-            or []
-        )
-        self._offpeak_windows = (
-            parse_windows(
-                opt_windows_text(
-                    self._opt(CONF_OFFPEAK_WINDOWS, DEFAULT_OFFPEAK_WINDOWS),
-                    DEFAULT_OFFPEAK_WINDOWS,
-                )
-            )
-            or []
-        )
-        self._peak_interval = int(self._opt(CONF_PEAK_INTERVAL, DEFAULT_PEAK_INTERVAL))
-        self._offpeak_interval = int(
-            self._opt(CONF_OFFPEAK_INTERVAL, DEFAULT_OFFPEAK_INTERVAL)
-        )
-        self._period_weekdays = bool(
-            self._opt(CONF_PERIOD_WEEKDAYS, DEFAULT_PERIOD_WEEKDAYS)
         )
 
     def _roll_usage_day(self) -> None:
@@ -400,41 +374,12 @@ class XiaomiAccount:
         if amap is not None:
             self._amap_count = amap
 
-    def _weekday_periods(self, weekday: int) -> bool:
-        return not self._period_weekdays or weekday < 5
-
     def _period_interval(self) -> int:
-        now = dt_now()
-        now_min = now.hour * 60 + now.minute
-        if not self._weekday_periods(now.weekday()):
-            return self._max_interval
-        if self._peak_enabled and in_windows(now_min, self._peak_windows):
-            return self._peak_interval
-        if self._offpeak_enabled and in_windows(now_min, self._offpeak_windows):
-            return self._offpeak_interval
         return self._max_interval
 
-    def _low_battery_interval(self, devices_data: list[dict]) -> int | None:
-        if not self._opt(CONF_LOW_BATTERY_POLLING, DEFAULT_LOW_BATTERY_POLLING):
-            return None
-        threshold = int(
-            self._opt(CONF_LOW_BATTERY_THRESHOLD, DEFAULT_LOW_BATTERY_THRESHOLD)
-        )
-        for device in devices_data:
-            power = device.get("device_power")
-            if power is not None and int(power) < threshold:
-                return int(
-                    self._opt(CONF_LOW_BATTERY_INTERVAL, DEFAULT_LOW_BATTERY_INTERVAL)
-                )
-        return None
-
     async def _apply_fetch_interval(self, devices_data: list[dict] | None = None) -> None:
-        self._load_period_options()
+        self._load_interval_options()
         interval = self._period_interval()
-        if devices_data:
-            low = self._low_battery_interval(devices_data)
-            if low is not None:
-                interval = low
         coordinator_interval = int(self._coordinator._scan_interval)
         if coordinator_interval != interval:
             await self._coordinator._update_interval_changed(interval)
@@ -447,21 +392,27 @@ class XiaomiAccount:
 
     async def async_keep_alive(self, force_locate: bool = False) -> None:
         await self._coordinator.async_refresh()
-        self._locate_count += 1
 
     def reload_options(self) -> None:
-        self._load_period_options()
+        self._load_interval_options()
         data = self._coordinator.data if isinstance(self._coordinator.data, list) else []
         self.hass.async_create_task(self._apply_fetch_interval(data))
 
     @callback
     def _handle_coordinator_update(self) -> None:
+        if self._coordinator.last_update_success:
+            self._roll_usage_day()
+            self._locate_count += 1
         data = self._coordinator.data if isinstance(self._coordinator.data, list) else []
         self.hass.async_create_task(self._apply_fetch_interval(data))
         self._sync_devices()
 
     async def _post_sync_update(self) -> None:
-        await self._update_amap_addresses()
+        dispatcher_send(self.hass, self.signal_device_update)
+        try:
+            await self._update_amap_addresses()
+        except Exception as err:
+            _LOGGER.warning("高德地址更新失败: %s", err)
         dispatcher_send(self.hass, self.signal_device_update)
 
     def _sync_devices(self) -> None:
@@ -488,24 +439,30 @@ class XiaomiAccount:
         self.hass.async_create_task(self._post_sync_update())
 
     async def _update_amap_addresses(self) -> None:
-        key = self._amap_key()
-        if not key:
+        if not self._amap_enabled():
             return
-        commute_on = bool(self._opt(CONF_COMMUTE_ENABLED, DEFAULT_COMMUTE_ENABLED))
-        if commute_on:
+        key = self._amap_key()
+        if not self._amap_allowed():
+            _LOGGER.debug("今日高德调用已达上限 %s，跳过", AMAP_DAILY_LIMIT)
+            return
+        if bool(self._opt(CONF_COMMUTE_ENABLED, DEFAULT_COMMUTE_ENABLED)):
             await self._update_commute()
-        else:
-            tasks = [
-                device.async_fetch_address(key)
-                for device in self._devices.values()
-                if device.latitude is not None and device.longitude is not None
-            ]
-            if tasks:
-                await asyncio.gather(*tasks, return_exceptions=True)
+        tasks = [
+            device.async_fetch_address(key)
+            for device in self._devices.values()
+            if device.needs_amap_address
+        ]
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+
+    def _amap_allowed(self) -> bool:
+        self._roll_usage_day()
+        return self._amap_count < AMAP_DAILY_LIMIT
 
     def _bump_amap(self) -> None:
         self._roll_usage_day()
-        self._amap_count += 1
+        if self._amap_count < AMAP_DAILY_LIMIT:
+            self._amap_count += 1
 
     @callback
     def _home_zones(self) -> list[tuple[str, str, float, float, float]]:
@@ -680,12 +637,31 @@ class XiaomiDevice:
         self._last_lon: float | None = None
         self.update(data)
 
+    @property
+    def clipboard(self) -> str:
+        return self.clipboard_text
+
+    @clipboard.setter
+    def clipboard(self, value: str) -> None:
+        self.clipboard_text = value or ""
+
     def update(self, data: dict[str, Any]) -> None:
         prev_lat = self._last_lat
         prev_lon = self._last_lon
-        lat = data.get("device_lat")
-        lon = data.get("device_lon")
-        self._data = data
+        merged = dict(data)
+        if merged.get("device_lat") is None and self._data.get("device_lat") is not None:
+            for key in (
+                "device_lat",
+                "device_lon",
+                "device_accuracy",
+                "device_location_update_time",
+                "coordinate_type",
+            ):
+                if merged.get(key) is None and self._data.get(key) is not None:
+                    merged[key] = self._data[key]
+        lat = merged.get("device_lat")
+        lon = merged.get("device_lon")
+        self._data = merged
         if lat is not None and lon is not None:
             lat_f = float(lat)
             lon_f = float(lon)
@@ -836,18 +812,29 @@ class XiaomiDevice:
         if text:
             self._commute_info = text
 
+    @property
+    def needs_amap_address(self) -> bool:
+        lat = self.latitude
+        lon = self.longitude
+        if lat is None or lon is None:
+            return False
+        if not self._location_address:
+            return True
+        return self._amap_grid != _amap_grid(lon, lat)
+
     async def async_fetch_address(self, key: str) -> None:
         lat = self.latitude
         lon = self.longitude
         if lat is None or lon is None:
             return
-        addr_key = (round(lat, 5), round(lon, 5))
-        if self._last_address_key == addr_key and self._location_address:
+        if not self._account._amap_allowed():
             return
-        gcj_lon, gcj_lat = lon, lat
+        grid = _amap_grid(lon, lat)
+        if self._amap_grid == grid and self._location_address:
+            return
         url = "https://restapi.amap.com/v3/geocode/regeo"
         params = {
-            "location": f"{gcj_lon:.6f},{gcj_lat:.6f}",
+            "location": f"{lon:.6f},{lat:.6f}",
             "key": key,
             "radius": 1000,
             "extensions": "all",
@@ -856,22 +843,37 @@ class XiaomiDevice:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, params=params, timeout=10) as resp:
                     if resp.status != 200:
+                        _LOGGER.warning("高德逆地理 HTTP %s", resp.status)
                         return
                     js = await resp.json()
             if str(js.get("status")) != "1":
+                _LOGGER.warning(
+                    "高德逆地理失败: info=%s infocode=%s",
+                    js.get("info"),
+                    js.get("infocode"),
+                )
                 return
             geo = js.get("regeocode") or {}
             comp = geo.get("addressComponent") or {}
-            self._location_address = geo.get("formatted_address")
             pois = geo.get("pois") or []
-            if pois and isinstance(pois[0], dict):
-                self._location_poi = pois[0].get("name")
-            self._location_city = comp.get("city") or comp.get("province")
-            self._location_district = comp.get("district")
-            self._last_address_key = addr_key
+            poi = _amap_text(
+                pois[0].get("name") if pois and isinstance(pois[0], dict) else None
+            )
+            address = _amap_text(geo.get("formatted_address")) or poi
+            if not address:
+                _LOGGER.warning("高德逆地理无地址结果: %s,%s", lon, lat)
+                return
+            self._location_address = address
+            self._location_poi = poi
+            self._location_city = _amap_text(comp.get("city")) or _amap_text(
+                comp.get("province")
+            )
+            self._location_district = _amap_text(comp.get("district"))
+            self._amap_grid = grid
+            self._last_address_key = (round(lat, 5), round(lon, 5))
             self._account._bump_amap()
-        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError):
-            return
+        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as err:
+            _LOGGER.warning("高德逆地理异常: %s", err)
 
     async def async_apply_commute(
         self,
@@ -906,17 +908,21 @@ class XiaomiDevice:
                 best = zone
 
         async def _refresh_address() -> bool:
+            if self._amap_grid == grid and self._location_address:
+                return True
+            if not self._account._amap_allowed():
+                return bool(self._location_address)
             geo = await _amap_regeo_async(session, key, olng, olat)
+            if not geo or not geo.get("address"):
+                return False
             self._account._bump_amap()
             self._amap_grid = grid
-            if geo and geo.get("address"):
-                self._location_address = geo["address"]
-                self._location_poi = geo.get("poi")
-                self._location_city = geo.get("city")
-                self._location_district = geo.get("district")
-                self._last_address_key = (round(lat, 5), round(lon, 5))
-                return True
-            return False
+            self._location_address = geo["address"]
+            self._location_poi = geo.get("poi")
+            self._location_city = geo.get("city")
+            self._location_district = geo.get("district")
+            self._last_address_key = (round(lat, 5), round(lon, 5))
+            return True
 
         if inside is not None:
             self._commute_inside = True
@@ -950,11 +956,13 @@ class XiaomiDevice:
         if route_key == self._amap_route_key:
             return
         await _refresh_address()
+        if not self._account._amap_allowed():
+            return
         route = await _amap_route_async(session, key, mode, olng, olat, dlng, dlat)
-        self._account._bump_amap()
-        self._amap_route_key = route_key
         if route is None:
             return
+        self._account._bump_amap()
+        self._amap_route_key = route_key
         distance_km, minutes, info = route
         self._commute_distance = distance_km
         self._commute_time = minutes

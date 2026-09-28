@@ -17,6 +17,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 from homeassistant.util import slugify
 
+from .announce import async_announce, speech_text
 from .localize import tr
 
 from .const import (
@@ -1083,39 +1084,7 @@ class HomeTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_announce(
         self, message: str, person: dict[str, Any] | None = None
     ) -> None:
-        players = _as_list(self.cfg(CONF_ANNOUNCE))
-        if not players or not message:
-            return
-        for eid in players:
-            if not isinstance(eid, str) or "." not in eid:
-                continue
-            domain = eid.split(".", 1)[0]
-            try:
-                if domain in ("text", "input_text"):
-                    await self.hass.services.async_call(
-                        domain, "set_value", {"entity_id": eid, "value": message}, blocking=False
-                    )
-                elif domain == "media_player":
-                    if self.hass.services.has_service("xiaomi_miot", "intelligent_speaker"):
-                        await self.hass.services.async_call(
-                            "xiaomi_miot",
-                            "intelligent_speaker",
-                            {"entity_id": eid, "text": message, "execute": False, "silent": False},
-                            blocking=False,
-                        )
-                    elif self.hass.services.has_service("tts", "speak"):
-                        tts_ids = self.hass.states.async_entity_ids("tts")
-                        if not tts_ids:
-                            continue
-                        await self.hass.services.async_call(
-                            "tts",
-                            "speak",
-                            {"media_player_entity_id": eid, "message": message},
-                            target={"entity_id": tts_ids[0]},
-                            blocking=False,
-                        )
-            except Exception:
-                _LOGGER.exception("播报失败")
+        await async_announce(self.hass, self.cfg(CONF_ANNOUNCE), message)
 
     async def _async_notify(
         self,
@@ -1171,7 +1140,7 @@ class HomeTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self.hass, "leave_message", addr=addr, commute=commute, now=now_s
             )
         await self._async_send_notify(title, message, person)
-        await self._async_announce(message.strip(), person)
+        await self._async_announce(speech_text(title, message), person)
 
     async def _async_notify_station(
         self, tracker_id: str, enter: bool, station: str
@@ -1205,7 +1174,7 @@ class HomeTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             now=now_s,
         )
         await self._async_send_notify(title, message, person)
-        await self._async_announce(message.strip(), person)
+        await self._async_announce(speech_text(title, message), person)
 
     async def async_set_away(self, tracker_id: str, on: bool, *, notify: bool = False) -> None:
         was_away = bool((self._data.get("away") or {}).get(tracker_id))

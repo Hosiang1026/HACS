@@ -14,8 +14,10 @@ from .const import DOMAIN
 _DEVICE_TEXTS = (
     ("lost_message", "lost_message", "lost_message", "mdi:message-alert", 200),
     ("lost_number", "lost_number", "lost_number", "mdi:phone", 32),
-    ("clipboard", "clipboard", "clipboard_text", "mdi:clipboard-text", 500),
+    ("clipboard", "clipboard_text", "clipboard", "mdi:clipboard-text", 500),
 )
+
+_FIELD_ALIASES = {"clipboard": "clipboard_text"}
 
 
 async def async_setup_entry(
@@ -86,7 +88,7 @@ class XiaomiDeviceText(RestoreEntity, TextEntity):
         self._device = device
         self._tracked = tracked
         self._track_key = track_key
-        self._field = field
+        self._field = _FIELD_ALIASES.get(field, field)
         self._unsub_dispatcher: CALLBACK_TYPE | None = None
         self._attr_unique_id = track_key
         self._attr_translation_key = translation_key
@@ -107,7 +109,7 @@ class XiaomiDeviceText(RestoreEntity, TextEntity):
 
     @property
     def native_value(self) -> str:
-        return getattr(self._device, self._field) or ""
+        return getattr(self._device, self._field, "") or ""
 
     async def async_set_value(self, value: str) -> None:
         setattr(self._device, self._field, value)

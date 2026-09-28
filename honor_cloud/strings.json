@@ -1,0 +1,152 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Honor Cloud Service Configuration",
+        "description": "Please configure the Honor Cloud service connection.",
+        "data": {
+          "service_base_url": "Playwright Service URL",
+          "username": "Honor Account",
+          "password": "Honor Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to Playwright service. Please check the service URL and network connection.",
+      "invalid_auth": "Authentication failed. Please check your username and password.",
+      "base_url_required": "Playwright service URL cannot be empty.",
+      "invalid_url": "Invalid Playwright service URL format. Must start with http:// or https://.",
+      "username_required": "Honor account cannot be empty.",
+      "password_required": "Honor password cannot be empty.",
+      "unknown": "Unknown error"
+    },
+    "abort": {
+      "already_configured": "This Honor Cloud service is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Honor Cloud Options",
+        "menu_options": {
+          "locate": "Locate settings",
+          "amap": "Amap settings",
+          "account": "Account & Backend"
+        }
+      },
+      "locate": {
+        "title": "Locate settings",
+        "data": {
+          "interval": "Location update interval (minutes)",
+          "use_page_location": "Enable active positioning"
+        }
+      },
+      "amap": {
+        "title": "Amap settings",
+        "data": {
+          "amap_api_key": "Amap Key",
+          "amap_daily_limit": "Daily call limit (free tier ≤4500 recommended)",
+          "enable_amap": "Enable Amap calls",
+          "commute_enabled": "Enable commute",
+          "commute_zones": "Home zones",
+          "activity_entity": "Activity status"
+        },
+        "data_description": {
+          "activity_entity": "Multiple; one per person. Values: 在家, 公司, 外出, 外地"
+        }
+      },
+      "account": {
+        "title": "Account & Backend",
+        "data": {
+          "service_base_url": "Playwright Service URL",
+          "username": "Honor Account",
+          "password": "Honor Password",
+          "api_key": "Backend API Key"
+        }
+      }
+    },
+    "error": {
+      "amap_required": "Enable Amap calls before commute",
+      "commute_key": "Enter Amap key",
+      "commute_zones": "Select at least one home zone"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "created_at": {
+        "name": "Created at"
+      },
+      "locate_count": {
+        "name": "Daily locate calls"
+      },
+      "amap_count": {
+        "name": "Daily Amap calls"
+      },
+      "honor_devices_count": {
+        "name": "Honor Device Count"
+      },
+      "honor_session_expires_in": {
+        "name": "Honor Session Remaining Time"
+      },
+      "honor_device_battery": {
+        "name": "Honor Device Battery"
+      },
+      "commute_distance": {
+        "name": "Commute distance"
+      },
+      "commute_time": {
+        "name": "Commute time"
+      },
+      "commute_info": {
+        "name": "Commute info"
+      },
+      "phone_status": {
+        "name": "Phone status",
+        "state": {
+          "online": "Online",
+          "offline": "Offline",
+          "unknown": "Unknown"
+        }
+      }
+    },
+    "button": {
+      "update": {
+        "name": "Update"
+      },
+      "honor_force_login": {
+        "name": "Honor Force Login"
+      },
+      "honor_sync_now": {
+        "name": "Honor Sync Now"
+      },
+      "lost_device": {
+        "name": "Lost Mode"
+      }
+    },
+    "text": {
+      "lost_password": {
+        "name": "Lock Password"
+      },
+      "lost_message": {
+        "name": "Lost Message"
+      },
+      "lost_number": {
+        "name": "Contact Phone"
+      }
+    }
+  },
+  "services": {
+    "force_sync": {
+      "name": "Force Sync",
+      "description": "Immediately trigger a device location sync, ignoring the polling interval."
+    },
+    "ring": {
+      "name": "Ring",
+      "description": "Trigger device ring"
+    },
+    "lost": {
+      "name": "Lost Mode",
+      "description": "Enable or disable lost mode"
+    }
+  }
+}

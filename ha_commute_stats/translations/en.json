@@ -130,6 +130,12 @@
     },
     "announce_join": {
       "message": "{title}. {commute}"
+    },
+    "announce_test": {
+      "message": "This is a test announcement"
+    },
+    "announce_test_button": {
+      "message": "Test announcement"
     }
   },
   "config": {
@@ -247,6 +253,7 @@
           "indoor_sensor": "Indoor occupancy sensor",
           "notify": "Notify action",
           "announce": "Announce player",
+          "test_announce": "Test announcement",
           "amap_key": "Amap key",
           "holiday_sensor": "Day type"
         }
@@ -450,7 +457,9 @@
       "no_work_people": "No people with work zones"
     },
     "error": {
-      "already_person": "This person is already added"
+      "already_person": "This person is already added",
+      "announce_empty": "No announce player selected",
+      "announce_failed": "Announcement failed"
     }
   },
   "common": {

@@ -4,7 +4,6 @@ from copy import deepcopy
 from typing import Any
 
 import voluptuous as vol
-import voluptuous_serialize
 
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_NAME
@@ -28,6 +27,7 @@ from homeassistant.helpers.selector import (
     TimeSelector,
 )
 
+from .announce import async_announce
 from .localize import tr
 from .const import (
     CONF_ACTIVITY_SENSOR,
@@ -122,6 +122,42 @@ _ARRIVE_ROW = "arrive_row"
 _LEAVE_ROW = "leave_row"
 
 
+def _field_list(schema: vol.Schema) -> Any:
+    try:
+        from probatio import to_field_list
+    except ImportError:
+        import voluptuous_serialize
+
+        return voluptuous_serialize.convert(
+            schema, custom_serializer=cv.custom_serializer
+        )
+    return to_field_list(schema, custom_serializer=cv.custom_serializer)
+
+
+class _AnnounceTest(Selector):
+    selector_type = "select"
+    CONFIG_SCHEMA = vol.Schema({}, extra=vol.ALLOW_EXTRA)
+
+    def __init__(self, label: str) -> None:
+        self.config: dict[str, Any] = {}
+        self._label = label
+
+    def __call__(self, data: Any) -> Any:
+        if data in (None, "", "test"):
+            return data
+        raise vol.Invalid("invalid")
+
+    def serialize(self) -> dict[str, Any]:
+        return {
+            "selector": {
+                "select": {
+                    "options": [{"value": "test", "label": self._label}],
+                    "mode": "box",
+                }
+            }
+        }
+
+
 class _FormGrid(Selector):
     selector_type = "grid"
     CONFIG_SCHEMA = vol.Schema({}, extra=vol.ALLOW_EXTRA)
@@ -140,10 +176,7 @@ class _FormGrid(Selector):
             "type": "grid",
             "flatten": False,
             "column_min_width": self._column_min_width,
-            "schema": voluptuous_serialize.convert(
-                vol.Schema(self._fields),
-                custom_serializer=cv.custom_serializer,
-            ),
+            "schema": _field_list(vol.Schema(self._fields)),
         }
 
 
@@ -309,6 +342,7 @@ def _shared_fields(
     include_name: bool = False,
     defaults: dict[str, Any] | None = None,
     hass: HomeAssistant | None = None,
+    include_test: bool = False,
 ) -> dict[Any, Any]:
     defaults = defaults or {}
     schema: dict[Any, Any] = {}
@@ -333,6 +367,14 @@ def _shared_fields(
             vol.Optional(CONF_ANNOUNCE): EntitySelector(
                 EntitySelectorConfig(multiple=True)
             ),
+        }
+    )
+    if include_test:
+        schema[vol.Optional("test_announce")] = _AnnounceTest(
+            tr(hass, "announce_test_button") if hass else "测试播报"
+        )
+    schema.update(
+        {
             vol.Optional(CONF_AMAP_KEY): TextSelector(
                 TextSelectorConfig(type=TextSelectorType.PASSWORD)
             ),
@@ -858,13 +900,36 @@ class HomeTimeOptionsFlow(OptionsFlow):
     ) -> ConfigFlowResult:
         current = self._entry_fallback()
         if user_input is not None:
+            test = user_input.get("test_announce") == "test"
             options = {**self.config_entry.options}
             options.update(_shared_options(user_input, self.config_entry.options))
+            if test:
+                err = await async_announce(
+                    self.hass,
+                    options.get(CONF_ANNOUNCE) or [],
+                    tr(self.hass, "announce_test"),
+                )
+                if err:
+                    draft = {**current, **options}
+                    return self.async_show_form(
+                        step_id="global",
+                        data_schema=self.add_suggested_values_to_schema(
+                            vol.Schema(
+                                _shared_fields(
+                                    defaults=draft, hass=self.hass, include_test=True
+                                )
+                            ),
+                            _shared_values(draft, hass=self.hass),
+                        ),
+                        errors={"base": err},
+                    )
             return self.async_create_entry(title="", data=options)
         return self.async_show_form(
             step_id="global",
             data_schema=self.add_suggested_values_to_schema(
-                vol.Schema(_shared_fields(defaults=current, hass=self.hass)),
+                vol.Schema(
+                    _shared_fields(defaults=current, hass=self.hass, include_test=True)
+                ),
                 _shared_values(current, hass=self.hass),
             ),
         )

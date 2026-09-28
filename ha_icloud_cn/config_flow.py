@@ -264,6 +264,7 @@ class IcloudFlowHandler(ConfigFlow, domain=DOMAIN):
                 Store(self.hass, STORAGE_VERSION, STORAGE_KEY).path,
                 with_family=self._with_family,
                 china_mainland=True,
+                accept_terms=True,
             )
         )
 

@@ -4,7 +4,6 @@ from typing import Any
 from uuid import uuid4
 
 import voluptuous as vol
-import voluptuous_serialize
 
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.core import callback
@@ -110,6 +109,18 @@ _RULE_SECTIONS = (
 _ZONE_TRIGGERS = (TRIGGER_ZONE_ENTER, TRIGGER_ZONE_LEAVE)
 
 
+def _field_list(schema: vol.Schema) -> Any:
+    try:
+        from probatio import to_field_list
+    except ImportError:
+        import voluptuous_serialize
+
+        return voluptuous_serialize.convert(
+            schema, custom_serializer=cv.custom_serializer
+        )
+    return to_field_list(schema, custom_serializer=cv.custom_serializer)
+
+
 class _FormGrid(Selector):
     selector_type = "grid"
     CONFIG_SCHEMA = vol.Schema({}, extra=vol.ALLOW_EXTRA)
@@ -128,10 +139,7 @@ class _FormGrid(Selector):
             "type": "grid",
             "flatten": False,
             "column_min_width": self._column_min_width,
-            "schema": voluptuous_serialize.convert(
-                vol.Schema(self._fields),
-                custom_serializer=cv.custom_serializer,
-            ),
+            "schema": _field_list(vol.Schema(self._fields)),
         }
 
 

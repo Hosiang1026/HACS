@@ -15,7 +15,10 @@ from .account import XiaomiAccount
 from .DataUpdateCoordinator import XiaomiCloudDataUpdateCoordinator
 from .const import (
     CONF_MAX_INTERVAL,
+    CONF_DEVICE_ID,
+    CONF_PASS_TOKEN,
     CONF_UPDATE_INTERVAL,
+    CONF_USER_ID,
     DOMAIN,
     INTEGRATION_HUB_SUFFIX,
     INTEGRATION_MANUFACTURER,
@@ -71,10 +74,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         username,
         password,
         update_interval,
+        pass_token=entry.data.get(CONF_PASS_TOKEN),
+        user_id=entry.data.get(CONF_USER_ID),
+        device_id=entry.data.get(CONF_DEVICE_ID),
     )
 
     account = XiaomiAccount(hass, entry, coordinator)
     await account.async_setup()
+
+    if coordinator.token_updated:
+        tokens = coordinator.export_tokens()
+        hass.config_entries.async_update_entry(
+            entry,
+            data={
+                **entry.data,
+                CONF_PASS_TOKEN: tokens.get("pass_token"),
+                CONF_USER_ID: tokens.get("user_id"),
+                CONF_DEVICE_ID: tokens.get("device_id"),
+            },
+        )
 
     if not coordinator.last_update_success and not account.devices:
         from homeassistant.exceptions import ConfigEntryNotReady

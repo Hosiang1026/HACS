@@ -40,25 +40,6 @@ Lovelace 前端卡片，配合 `ha_msg_notify` 使用。
 
 ---
 
-## 音乐播放器（ha_music_player）
-
-本地音乐播放后端；卡片 `ha-music-player-card` 需单独安装。
-
-### 功能
-
-- 扫描 HA 主机音乐目录（mp3 / flac / m4a / wav / ogg / aac / wma）
-- `media_player`：播放控制、进度、音量、循环、随机、浏览曲库
-- 输出：浏览器、其他音箱、可选小爱
-- 读取标签、封面、内嵌/旁路歌词
-
-### 场景
-
-- NAS / 本地曲库在 HA 内播放
-- 推送到客厅音箱或小爱
-- Lovelace 音乐控制面板
-
----
-
 ## 智能场景（ha_iot_scene）
 
 用「场景 + 多规则」配置家电联动：触发 → 条件 → 控制 → 按需播报（不发 notify）。

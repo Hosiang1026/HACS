@@ -1,0 +1,152 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "荣耀云服务配置",
+        "description": "请配置荣耀云服务连接信息",
+        "data": {
+          "service_base_url": "Playwright服务地址",
+          "username": "荣耀账号",
+          "password": "荣耀密码"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "无法连接到Playwright服务，请检查服务地址和网络连接",
+      "invalid_auth": "认证失败，请检查用户名和密码",
+      "base_url_required": "Playwright服务地址不能为空",
+      "invalid_url": "Playwright服务地址格式不正确，必须以 http:// 或 https:// 开头",
+      "username_required": "荣耀账号不能为空",
+      "password_required": "荣耀密码不能为空",
+      "unknown": "未知错误"
+    },
+    "abort": {
+      "already_configured": "此荣耀云服务已配置"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "荣耀云服务选项",
+        "menu_options": {
+          "locate": "定位设置",
+          "amap": "高德设置",
+          "account": "账号与后端"
+        }
+      },
+      "locate": {
+        "title": "定位设置",
+        "data": {
+          "interval": "位置更新间隔(分钟)",
+          "use_page_location": "启用主动定位（触发荣耀云实时定位）"
+        }
+      },
+      "amap": {
+        "title": "高德设置",
+        "data": {
+          "amap_api_key": "高德 Key",
+          "amap_daily_limit": "每日调用上限（免费额度建议 ≤4500）",
+          "enable_amap": "启用高德调用",
+          "commute_enabled": "是否启用通勤",
+          "commute_zones": "家区域",
+          "activity_entity": "活动状态"
+        },
+        "data_description": {
+          "activity_entity": "可多选，每人对应一个；值：在家、公司、外出、外地"
+        }
+      },
+      "account": {
+        "title": "账号与后端",
+        "data": {
+          "service_base_url": "Playwright服务地址",
+          "username": "荣耀账号",
+          "password": "荣耀密码",
+          "api_key": "后端 API Key"
+        }
+      }
+    },
+    "error": {
+      "amap_required": "启用通勤需先开启高德调用",
+      "commute_key": "请填写高德 Key",
+      "commute_zones": "请选择至少一个家区域"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "created_at": {
+        "name": "创建时间"
+      },
+      "locate_count": {
+        "name": "每日定位调用次数"
+      },
+      "amap_count": {
+        "name": "每日高德调用次数"
+      },
+      "honor_devices_count": {
+        "name": "荣耀设备数量"
+      },
+      "honor_session_expires_in": {
+        "name": "荣耀会话剩余时间"
+      },
+      "honor_device_battery": {
+        "name": "荣耀设备电量"
+      },
+      "commute_distance": {
+        "name": "通勤距离"
+      },
+      "commute_time": {
+        "name": "通勤时间"
+      },
+      "commute_info": {
+        "name": "通勤信息"
+      },
+      "phone_status": {
+        "name": "手机状态",
+        "state": {
+          "online": "在线",
+          "offline": "离线",
+          "unknown": "未知"
+        }
+      }
+    },
+    "button": {
+      "update": {
+        "name": "更新"
+      },
+      "honor_force_login": {
+        "name": "荣耀强制登录"
+      },
+      "honor_sync_now": {
+        "name": "荣耀立即同步"
+      },
+      "lost_device": {
+        "name": "丢失模式"
+      }
+    },
+    "text": {
+      "lost_password": {
+        "name": "锁屏密码"
+      },
+      "lost_message": {
+        "name": "丢失留言"
+      },
+      "lost_number": {
+        "name": "联系电话"
+      }
+    }
+  },
+  "services": {
+    "force_sync": {
+      "name": "强制同步",
+      "description": "立即触发一次设备位置同步，忽略轮询间隔"
+    },
+    "ring": {
+      "name": "响铃",
+      "description": "触发设备响铃"
+    },
+    "lost": {
+      "name": "丢失模式",
+      "description": "开启或关闭设备丢失模式"
+    }
+  }
+}
