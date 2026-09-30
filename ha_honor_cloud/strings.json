@@ -1,0 +1,174 @@
+{
+  "title": "Honor Cloud",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Honor Cloud configuration",
+        "description": "Configure the Playwright backend and Honor account.",
+        "data": {
+          "service_base_url": "Playwright service URL",
+          "username": "Honor account",
+          "password": "Honor password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to Playwright service. Check the URL and network.",
+      "invalid_auth": "Authentication failed. Check username and password.",
+      "base_url_required": "Playwright service URL is required.",
+      "invalid_url": "Invalid URL. Must start with http:// or https://.",
+      "username_required": "Honor account is required.",
+      "password_required": "Honor password is required.",
+      "unknown": "Unknown error"
+    },
+    "abort": {
+      "already_configured": "This Honor Cloud service is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Honor Cloud options",
+        "menu_options": {
+          "locate": "Locate settings",
+          "amap": "Amap settings",
+          "account": "Account & backend"
+        }
+      },
+      "locate": {
+        "title": "Locate settings",
+        "data": {
+          "interval": "Location update interval (minutes)",
+          "use_page_location": "Enable active positioning"
+        }
+      },
+      "amap": {
+        "title": "Amap settings",
+        "data": {
+          "amap_api_key": "Amap key",
+          "amap_daily_limit": "Daily call limit (free tier ≤4500 recommended)",
+          "enable_amap": "Enable Amap calls",
+          "commute_enabled": "Enable commute",
+          "commute_zones": "Home zones",
+          "activity_entity": "Activity status"
+        },
+        "data_description": {
+          "activity_entity": "Multiple; one per person. Values: 在家, 公司, 外出, 外地"
+        }
+      },
+      "account": {
+        "title": "Account & backend",
+        "data": {
+          "service_base_url": "Playwright service URL",
+          "username": "Honor account",
+          "password": "Honor password",
+          "api_key": "Backend API key"
+        }
+      }
+    },
+    "error": {
+      "amap_required": "Enable Amap calls before commute",
+      "commute_key": "Enter Amap key",
+      "commute_zones": "Select at least one home zone"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "created_at": { "name": "Created at" },
+      "locate_count": { "name": "Daily locate calls" },
+      "amap_count": { "name": "Daily Amap calls" },
+      "status": {
+        "name": "Service status",
+        "state": {
+          "initializing": "Initializing",
+          "waiting_login": "Waiting for login",
+          "logging_in": "Logging in",
+          "need_auth": "Authentication required",
+          "auth_expired": "Authentication expired",
+          "ok": "OK",
+          "error": "Error"
+        }
+      },
+      "battery": { "name": "Battery" },
+      "phone_status": {
+        "name": "Phone status",
+        "state": {
+          "online": "Online",
+          "offline": "Offline",
+          "unknown": "Unknown"
+        }
+      },
+      "update_time": { "name": "Last update" },
+      "address": { "name": "Address" },
+      "commute_distance": { "name": "Commute distance" },
+      "commute_time": { "name": "Commute time" },
+      "commute_info": { "name": "Commute info" }
+    },
+    "button": {
+      "update": { "name": "Update" },
+      "ring": { "name": "Ring" },
+      "lost_device": { "name": "Lost mode" }
+    },
+    "text": {
+      "lost_password": { "name": "Lock password" },
+      "lost_message": { "name": "Lost message" },
+      "lost_number": { "name": "Contact phone" }
+    }
+  },
+  "services": {
+    "force_sync": {
+      "name": "Force sync",
+      "description": "Immediately sync device locations, ignoring the polling interval.",
+      "fields": {
+        "mode": {
+          "name": "Mode",
+          "description": "normal: cached location; active: realtime locate (60s rate limit)."
+        }
+      }
+    },
+    "force_locate": {
+      "name": "Force locate",
+      "description": "Trigger active locate for all devices and refresh entities."
+    },
+    "ring": {
+      "name": "Ring",
+      "description": "Ring the device (find phone).",
+      "fields": {
+        "device_id": {
+          "name": "Device ID",
+          "description": "Honor device ID from device_tracker attributes."
+        },
+        "action": {
+          "name": "Action",
+          "description": "start to ring; stop is not supported yet."
+        }
+      }
+    },
+    "lost": {
+      "name": "Lost mode",
+      "description": "Enable or disable lost mode.",
+      "fields": {
+        "device_id": {
+          "name": "Device ID",
+          "description": "Honor device ID."
+        },
+        "action": {
+          "name": "Action",
+          "description": "start or stop."
+        },
+        "password": {
+          "name": "Lock password",
+          "description": "4-16 digits; leave empty to use the text entity value."
+        },
+        "message": {
+          "name": "Message",
+          "description": "Lock screen message; leave empty to use the text entity value."
+        },
+        "phone": {
+          "name": "Phone",
+          "description": "Contact phone; leave empty to use the text entity value."
+        }
+      }
+    }
+  }
+}

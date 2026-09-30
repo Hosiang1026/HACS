@@ -464,17 +464,50 @@ def cfg_notify_license(entry: ConfigEntry) -> bool:
     return cfg_12123(entry) and _cfg_notify_flag(entry, CONF_NOTIFY_LICENSE, DEFAULT_NOTIFY_LICENSE)
 
 
-def cfg_notify_actions(entry: ConfigEntry) -> Any:
-    return entry_cfg(entry).get(CONF_NOTIFY)
+def _notify_action_key(kind: str) -> str:
+    return f"{kind}_notify"
 
 
-def cfg_announce(entry: ConfigEntry) -> list[str]:
-    raw = entry_cfg(entry).get(CONF_ANNOUNCE)
+def _announce_key(kind: str) -> str:
+    return f"{kind}_announce"
+
+
+def _notify_configured(raw: Any) -> bool:
+    if not raw:
+        return False
+    if isinstance(raw, str):
+        return True
+    if isinstance(raw, dict):
+        return bool(raw.get("action") or raw.get("service"))
+    for item in raw:
+        if isinstance(item, str) and item:
+            return True
+        if isinstance(item, dict) and (item.get("action") or item.get("service")):
+            return True
+    return False
+
+
+def cfg_notify_actions(entry: ConfigEntry, kind: str) -> Any:
+    cfg = entry_cfg(entry)
+    key = _notify_action_key(kind)
+    if key in cfg:
+        return cfg.get(key)
+    return cfg.get(CONF_NOTIFY)
+
+
+def cfg_announce(entry: ConfigEntry, kind: str) -> list[str]:
+    cfg = entry_cfg(entry)
+    key = _announce_key(kind)
+    raw = cfg.get(key) if key in cfg else cfg.get(CONF_ANNOUNCE)
     if not raw:
         return []
     if isinstance(raw, str):
         return [raw]
     return [item for item in raw if isinstance(item, str) and item]
+
+
+def cfg_notify_has_target(entry: ConfigEntry, kind: str) -> bool:
+    return _notify_configured(cfg_notify_actions(entry, kind)) or bool(cfg_announce(entry, kind))
 
 
 def cfg_expire_days(entry: ConfigEntry) -> int:

@@ -37,10 +37,6 @@ _LOGGER = logging.getLogger(__name__)
 _OZ_TO_G = 31.1035
 
 
-def _now_text() -> str:
-    return dt_util.now().strftime("%Y-%m-%d %H:%M:%S")
-
-
 def _num(value: Any) -> str:
     if value is None:
         return ""
@@ -149,7 +145,6 @@ class MetalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     if data.get("silver") is not None
                     else "",
                     f"最低{label}：{_num(price)}元/克",
-                    f"当前时间：{_now_text()}",
                 ),
             )
         return True, notified

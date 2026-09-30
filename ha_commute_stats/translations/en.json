@@ -114,10 +114,10 @@
       "message": "{name} left home"
     },
     "arrive_message": {
-      "message": "Location: {addr}\nTime: {now}\n"
+      "message": "Location: {addr}\n"
     },
     "leave_message": {
-      "message": "{commute}Location: {addr}\nTime: {now}\n"
+      "message": "{commute}Location: {addr}\n"
     },
     "station_enter_title": {
       "message": "{name} entered station"
@@ -126,7 +126,7 @@
       "message": "{name} left station"
     },
     "station_message": {
-      "message": "Station: {station}\n{commute}Location: {addr}\nTime: {now}\n"
+      "message": "Station: {station}\n{commute}Location: {addr}\n"
     },
     "announce_join": {
       "message": "{title}. {commute}"
@@ -146,8 +146,6 @@
           "name": "Name",
           "total_people": "Total people",
           "indoor_sensor": "Indoor occupancy sensor",
-          "notify": "Notify action",
-          "announce": "Announce player",
           "amap_key": "Amap key",
           "holiday_sensor": "Day type"
         }
@@ -175,7 +173,11 @@
           "area_lon_min": "Min",
           "area_lon_max": "Max",
           "notify_arrive": "Arrive notify",
+          "notify_arrive_notify": "Notify action",
+          "notify_arrive_announce": "Announce player",
           "notify_leave": "Leave notify",
+          "notify_leave_notify": "Notify action",
+          "notify_leave_announce": "Announce player",
           "arrive_row": "Arrive window",
           "arrive_start": "Start",
           "arrive_end": "End",
@@ -183,8 +185,12 @@
           "leave_start": "Start",
           "leave_end": "End",
           "notify_station_enter": "Station enter notify",
+          "notify_station_enter_notify": "Notify action",
+          "notify_station_enter_announce": "Announce player",
           "station_enter_zones": "Station enter zones",
           "notify_station_leave": "Station leave notify",
+          "notify_station_leave_notify": "Notify action",
+          "notify_station_leave_announce": "Announce player",
           "station_leave_zones": "Station leave zones",
           "reset_home_duration": "Daily reset home duration"
         },
@@ -222,7 +228,9 @@
           "daily_reset": "Daily reset",
           "monthly_reset_day": "Monthly reset day",
           "work_enabled": "Enable work tracking",
-          "work_notify": "Enable notifications"
+          "work_notify": "Enable notifications",
+          "work_notify_notify": "Notify action",
+          "work_notify_announce": "Announce player"
         }
       }
     },
@@ -230,7 +238,8 @@
       "already_configured": "Commute Stats is already configured"
     },
     "error": {
-      "already_person": "This person is already added"
+      "already_person": "This person is already added",
+      "notify_or_announce": "Fill in at least one of notify action or announce player"
     }
   },
   "options": {
@@ -251,9 +260,6 @@
         "data": {
           "total_people": "Total people",
           "indoor_sensor": "Indoor occupancy sensor",
-          "notify": "Notify action",
-          "announce": "Announce player",
-          "test_announce": "Test announcement",
           "amap_key": "Amap key",
           "holiday_sensor": "Day type"
         }
@@ -275,7 +281,11 @@
           "area_lon_min": "Min",
           "area_lon_max": "Max",
           "notify_arrive": "Arrive notify",
+          "notify_arrive_notify": "Notify action",
+          "notify_arrive_announce": "Announce player",
           "notify_leave": "Leave notify",
+          "notify_leave_notify": "Notify action",
+          "notify_leave_announce": "Announce player",
           "arrive_row": "Arrive window",
           "arrive_start": "Start",
           "arrive_end": "End",
@@ -283,8 +293,12 @@
           "leave_start": "Start",
           "leave_end": "End",
           "notify_station_enter": "Station enter notify",
+          "notify_station_enter_notify": "Notify action",
+          "notify_station_enter_announce": "Announce player",
           "station_enter_zones": "Station enter zones",
           "notify_station_leave": "Station leave notify",
+          "notify_station_leave_notify": "Notify action",
+          "notify_station_leave_announce": "Announce player",
           "station_leave_zones": "Station leave zones",
           "reset_home_duration": "Daily reset home duration"
         },
@@ -349,7 +363,11 @@
           "area_lon_min": "Min",
           "area_lon_max": "Max",
           "notify_arrive": "Arrive notify",
+          "notify_arrive_notify": "Notify action",
+          "notify_arrive_announce": "Announce player",
           "notify_leave": "Leave notify",
+          "notify_leave_notify": "Notify action",
+          "notify_leave_announce": "Announce player",
           "arrive_row": "Arrive window",
           "arrive_start": "Start",
           "arrive_end": "End",
@@ -357,8 +375,12 @@
           "leave_start": "Start",
           "leave_end": "End",
           "notify_station_enter": "Station enter notify",
+          "notify_station_enter_notify": "Notify action",
+          "notify_station_enter_announce": "Announce player",
           "station_enter_zones": "Station enter zones",
           "notify_station_leave": "Station leave notify",
+          "notify_station_leave_notify": "Notify action",
+          "notify_station_leave_announce": "Announce player",
           "station_leave_zones": "Station leave zones",
           "reset_home_duration": "Daily reset home duration"
         },
@@ -396,7 +418,9 @@
           "daily_reset": "Daily reset",
           "monthly_reset_day": "Monthly reset day",
           "work_enabled": "Enable work tracking",
-          "work_notify": "Enable notifications"
+          "work_notify": "Enable notifications",
+          "work_notify_notify": "Notify action",
+          "work_notify_announce": "Announce player"
         }
       },
       "edit_work_rules": {
@@ -419,7 +443,9 @@
           "daily_reset": "Daily reset",
           "monthly_reset_day": "Monthly reset day",
           "work_enabled": "Enable work tracking",
-          "work_notify": "Enable notifications"
+          "work_notify": "Enable notifications",
+          "work_notify_notify": "Notify action",
+          "work_notify_announce": "Announce player"
         }
       },
       "edit_work_form": {
@@ -442,7 +468,9 @@
           "daily_reset": "Daily reset",
           "monthly_reset_day": "Monthly reset day",
           "work_enabled": "Enable work tracking",
-          "work_notify": "Enable notifications"
+          "work_notify": "Enable notifications",
+          "work_notify_notify": "Notify action",
+          "work_notify_announce": "Announce player"
         }
       },
       "edit_work": {
@@ -458,6 +486,7 @@
     },
     "error": {
       "already_person": "This person is already added",
+      "notify_or_announce": "Fill in at least one of notify action or announce player",
       "announce_empty": "No announce player selected",
       "announce_failed": "Announcement failed"
     }
@@ -471,8 +500,8 @@
     "minutes": "{minutes}m",
     "km_int": "{km} km",
     "km_float": "{km} km",
-    "clock_in_message": "Distance from home: {dist}\nTravel time: {time}\nLocation: {addr}\nTime: {now}",
-    "clock_out_message": "Overtime: {over_time} h\nComp time: {comp_time} h\nLocation: {addr}\nTime: {now}",
+    "clock_in_message": "Distance from home: {dist}\nTravel time: {time}\nLocation: {addr}",
+    "clock_out_message": "Overtime: {over_time} h\nComp time: {comp_time} h\nLocation: {addr}",
     "commute": "Home distance: {dist} Travel time: {time}"
   },
   "selector": {

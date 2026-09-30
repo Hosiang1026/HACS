@@ -51,9 +51,9 @@ from .const import (
     DEFAULT_NOTIFY_RULES_ENABLED,
     DOMAIN,
 )
-from .festival_engine import compute
+from .festival_engine import compute, format_merged_notify
 from .holiday_provider import HolidayProvider
-from .text_util import convert_obj
+from .text_util import convert_obj, convert_text
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -105,11 +105,7 @@ class HolidayDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=timedelta(hours=1))
         self.entry = entry
         self._unsub_time = None
-        self._last_calendar_day: str | None = None
-        self._last_festival_day: str | None = None
-        self._last_license_day: str | None = None
-        self._last_memorial_day: str | None = None
-        self._last_rules_day: str | None = None
+        self._last_notify_day: str | None = None
         self._last_ai_day: str | None = None
         self._notify_lock = asyncio.Lock()
         self.tap_date = dt_util.now().date()
@@ -252,77 +248,66 @@ class HolidayDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         async with self._notify_lock:
             await self._maybe_notify_locked(local)
 
-    async def _maybe_notify_locked(self, local: datetime) -> None:
-        opts = self.options
-        data = self.data or {}
-        day_key = local.strftime("%Y-%m-%d")
-        ch, cm = self._calendar_time(opts)
-        fh, fm = self._festival_time(opts)
-        lh, lm = self._license_time(opts)
-        mh, mm = self._memorial_time(opts)
-
-        if (
-            bool(opts.get(CONF_NOTIFY_CALENDAR, DEFAULT_NOTIFY_CALENDAR))
-            and local.hour == ch
-            and local.minute == cm
-            and self._last_calendar_day != day_key
-        ):
-            body = _valid_message(data.get("calendar_content"))
-            if body and await self._dispatch(opts, body, "日历通知"):
-                self._last_calendar_day = day_key
-
-        if (
-            bool(opts.get(CONF_NOTIFY_FESTIVAL, DEFAULT_NOTIFY_FESTIVAL))
-            and local.hour == fh
-            and local.minute == fm
-            and self._last_festival_day != day_key
-            and data.get("has_near_festival")
-        ):
-            body = _valid_message(data.get("festival_content"))
-            if body and await self._dispatch(opts, body, "节日通知"):
-                self._last_festival_day = day_key
-
-        if (
-            bool(opts.get(CONF_NOTIFY_LICENSE, DEFAULT_NOTIFY_LICENSE))
-            and local.hour == lh
-            and local.minute == lm
-            and self._last_license_day != day_key
-            and data.get("has_near_license")
-        ):
-            body = _valid_message(data.get("license_content"))
-            if body and await self._dispatch(opts, body, "证件到期通知"):
-                self._last_license_day = day_key
-
+    def _memorial_on(self, opts: dict[str, Any]) -> bool:
         memorial_on = opts.get(CONF_NOTIFY_MEMORIAL)
         if memorial_on is None:
             memorial_on = opts.get("notify_birthday", DEFAULT_NOTIFY_MEMORIAL) or opts.get(
                 "notify_anniversary", DEFAULT_NOTIFY_MEMORIAL
             )
-        if (
-            bool(memorial_on)
-            and local.hour == mh
-            and local.minute == mm
-            and self._last_memorial_day != day_key
-            and data.get("has_near_memorial")
-        ):
-            body = _valid_message(data.get("memorial_content"))
-            if body and await self._dispatch(opts, body, "生日/纪念日"):
-                self._last_memorial_day = day_key
+        return bool(memorial_on)
 
-        if (
-            bool(opts.get(CONF_NOTIFY_RULES_ENABLED, DEFAULT_NOTIFY_RULES_ENABLED))
-            and local.hour == fh
-            and local.minute == fm
-            and self._last_rules_day != day_key
-        ):
+    def _notify_slots(self, opts: dict[str, Any]) -> list[tuple[int, int]]:
+        slots: list[tuple[int, int]] = []
+        if bool(opts.get(CONF_NOTIFY_CALENDAR, DEFAULT_NOTIFY_CALENDAR)):
+            slots.append(self._calendar_time(opts))
+        if bool(opts.get(CONF_NOTIFY_FESTIVAL, DEFAULT_NOTIFY_FESTIVAL)):
+            slots.append(self._festival_time(opts))
+        if self._memorial_on(opts):
+            slots.append(self._memorial_time(opts))
+        if bool(opts.get(CONF_NOTIFY_LICENSE, DEFAULT_NOTIFY_LICENSE)):
+            slots.append(self._license_time(opts))
+        if bool(opts.get(CONF_NOTIFY_RULES_ENABLED, DEFAULT_NOTIFY_RULES_ENABLED)):
+            slots.append(self._festival_time(opts))
+        return slots
+
+    async def _maybe_notify_locked(self, local: datetime) -> None:
+        opts = self.options
+        data = self.data or {}
+        day_key = local.strftime("%Y-%m-%d")
+        if self._last_notify_day == day_key:
+            return
+        slots = self._notify_slots(opts)
+        if not slots:
+            return
+        hour, minute = min(slots)
+        if local.hour != hour or local.minute != minute:
+            return
+        festival_on = bool(opts.get(CONF_NOTIFY_FESTIVAL, DEFAULT_NOTIFY_FESTIVAL))
+        memorial_on = self._memorial_on(opts)
+        license_on = bool(opts.get(CONF_NOTIFY_LICENSE, DEFAULT_NOTIFY_LICENSE))
+        body = format_merged_notify(
+            data,
+            festival=festival_on,
+            memorial=memorial_on,
+            license_on=license_on,
+        )
+        if bool(opts.get(CONF_NOTIFY_RULES_ENABLED, DEFAULT_NOTIFY_RULES_ENABLED)):
             rules = opts.get(CONF_NOTIFY_RULES) or DEFAULT_NOTIFY_RULES
             if isinstance(rules, dict) and rules:
-                today = local.date()
-                lookup = build_festival_lookup(data, today, opts)
-                matches = match_notify_rules(rules, today, opts, lookup)
-                body = _valid_message(format_notify_messages(matches))
-                if body and await self._dispatch(opts, body, "高级通知"):
-                    self._last_rules_day = day_key
+                matches = match_notify_rules(
+                    rules, local.date(), opts, build_festival_lookup(data, local.date(), opts)
+                )
+                extra = _valid_message(format_notify_messages(matches))
+                if extra:
+                    body = f"{body}\n\n{extra}".strip() if body else extra
+        if not _valid_message(body):
+            return
+        language = str(opts.get(CONF_LANGUAGE) or DEFAULT_LANGUAGE)
+        if language == "zh-Hant":
+            body = convert_text(body, language)
+        title = "早上好🦔"
+        self._last_notify_day = day_key
+        await self._dispatch(opts, f"\n{body}", title)
 
     async def _dispatch(self, opts: dict[str, Any], body: str, title: str) -> bool:
         services = opts.get(CONF_NOTIFY) or []
@@ -330,26 +315,32 @@ class HolidayDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             services = [services]
         sent = False
         seen: set[str] = set()
+        message = str(body).replace("\\n", "\n")
+        carousel_text = f"{title}\n{message}" if title else message
+        stamp = dt_util.now().strftime("%Y-%m-%d %H:%M:%S")
+        footer = f"本通知 By 狂欢马克思\n通知时间: {stamp}"
+        language = str(opts.get(CONF_LANGUAGE) or DEFAULT_LANGUAGE)
+        if language == "zh-Hant":
+            footer = convert_text(footer, language)
+        notify_message = f"{message.strip()}\n\n{footer}"
         for item in services:
-            name = str(item)
-            if name in seen:
+            name = str(item).strip()
+            if not name or name in seen:
                 continue
             seen.add(name)
             domain, _, service = name.partition(".")
-            if domain != "notify" or not service:
+            if domain != "notify" or not service or service == "send_message":
                 continue
             try:
                 await self.hass.services.async_call(
                     "notify",
                     service,
-                    {"title": title, "message": body},
+                    {"title": title, "message": notify_message},
                     blocking=False,
                 )
                 sent = True
             except Exception:
                 _LOGGER.exception("notify failed: %s", item)
-
-        carousel_text = str(body).replace("\\n", "\n").strip()
         has_send = self.hass.services.has_service("ha_msg_notify", "send")
         has_carousel = self.hass.services.has_service("ha_msg_notify", "carousel")
 
@@ -371,7 +362,7 @@ class HolidayDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     "send",
                     {
                         "title": title,
-                        "message": body,
+                        "message": notify_message,
                         "content": carousel_text,
                         "source": title,
                         "carousel": True,

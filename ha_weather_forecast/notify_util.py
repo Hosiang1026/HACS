@@ -9,7 +9,6 @@ from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_ANNOUNCE,
-    CONF_ANNOUNCE_ENABLED,
     CONF_NOTIFY,
     CONF_NOTIFY_ENABLED,
     CONF_NOTIFY_END,
@@ -50,6 +49,29 @@ def format_carousel(*lines: str) -> str:
     return text.replace("\\n", "\n").strip()
 
 
+def append_notify_footer(message: str) -> str:
+    stamp = dt_util.now().strftime("%Y-%m-%d %H:%M:%S")
+    base = str(message).replace("\\n", "\n").strip()
+    return f"{base}\n\n本通知 By 狂欢马克思\n通知时间: {stamp}"
+
+
+def channel_targets(
+    module_cfg: dict[str, Any],
+    entry_data: dict[str, Any],
+    notify_key: str,
+    announce_key: str,
+) -> tuple[Any, Any]:
+    if notify_key in module_cfg:
+        notify = module_cfg.get(notify_key)
+    else:
+        notify = entry_data.get(CONF_NOTIFY)
+    if announce_key in module_cfg:
+        announce = module_cfg.get(announce_key)
+    else:
+        announce = entry_data.get(CONF_ANNOUNCE)
+    return notify, announce
+
+
 async def async_send_notify(
     hass: HomeAssistant,
     entry_data: dict[str, Any],
@@ -57,6 +79,7 @@ async def async_send_notify(
     title: str,
     message: str,
     carousel: str | None = None,
+    channel: tuple[Any, Any] | None = None,
 ) -> None:
     if not entry_data.get(CONF_NOTIFY_ENABLED, True):
         return
@@ -66,9 +89,15 @@ async def async_send_notify(
         return
 
     message = str(message).replace("\\n", "\n").strip()
+    notify_message = append_notify_footer(message)
     carousel_text = format_carousel(carousel or message)
+    if channel is None:
+        notify_items = entry_data.get(CONF_NOTIFY)
+        announce_items = entry_data.get(CONF_ANNOUNCE)
+    else:
+        notify_items, announce_items = channel
     sent = False
-    for item in _as_list(entry_data.get(CONF_NOTIFY)):
+    for item in _as_list(notify_items):
         action = None
         data: dict[str, Any] = {}
         target = None
@@ -81,7 +110,7 @@ async def async_send_notify(
         if not action or "." not in action:
             continue
         data["title"] = title
-        data["message"] = message
+        data["message"] = notify_message
         domain, service = action.split(".", 1)
         try:
             if hass.services.has_service(domain, service):
@@ -93,7 +122,7 @@ async def async_send_notify(
                 await hass.services.async_call(
                     "notify",
                     "send_message",
-                    {"entity_id": action, "title": title, "message": message},
+                    {"entity_id": action, "title": title, "message": notify_message},
                     blocking=False,
                 )
                 sent = True
@@ -117,7 +146,7 @@ async def async_send_notify(
                 "send",
                 {
                     "title": title,
-                    "message": message,
+                    "message": notify_message,
                     "content": carousel_text,
                     "source": title,
                     "carousel": True,
@@ -127,10 +156,8 @@ async def async_send_notify(
         except Exception:  # noqa: BLE001
             _LOGGER.exception("ha_msg_notify.send failed")
 
-    if not module_cfg.get(CONF_ANNOUNCE_ENABLED):
-        return
     text = f"{title}。{message}"
-    for eid in _as_list(entry_data.get(CONF_ANNOUNCE)):
+    for eid in _as_list(announce_items):
         if not isinstance(eid, str) or "." not in eid:
             continue
         domain = eid.split(".", 1)[0]

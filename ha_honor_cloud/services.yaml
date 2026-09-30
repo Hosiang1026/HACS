@@ -1,0 +1,87 @@
+force_sync:
+  name: Force sync
+  description: Immediately sync device locations, ignoring the polling interval.
+  fields:
+    mode:
+      name: Mode
+      description: normal = cached location; active = realtime locate (60s rate limit).
+      required: false
+      default: normal
+      example: normal
+      selector:
+        select:
+          options:
+            - label: Normal (cached)
+              value: normal
+            - label: Active (realtime)
+              value: active
+
+force_locate:
+  name: Force locate
+  description: Trigger active locate for all devices and refresh entities.
+
+ring:
+  name: Ring
+  description: Ring the device (find phone). Same device limited to once per 30 seconds.
+  fields:
+    device_id:
+      name: Device ID
+      description: Honor device ID from device_tracker attributes (device_id).
+      required: true
+      example: "7B165F7EE696F99BBEABC3AFD36AB3DA143E3455816319A8EDFB315FA2D35B79"
+      selector:
+        text:
+    action:
+      name: Action
+      description: start = ring (default); stop is not supported yet.
+      required: false
+      default: start
+      example: start
+      selector:
+        select:
+          options:
+            - label: Start
+              value: start
+            - label: Stop (unsupported)
+              value: stop
+
+lost:
+  name: Lost mode
+  description: Enable or disable lost mode. Prefer filling text entities first.
+  fields:
+    device_id:
+      name: Device ID
+      description: Honor device ID.
+      required: true
+      selector:
+        text:
+    action:
+      name: Action
+      description: start or stop.
+      required: false
+      default: start
+      selector:
+        select:
+          options:
+            - label: Start
+              value: start
+            - label: Stop
+              value: stop
+    password:
+      name: Lock password
+      description: 4-16 digits; leave empty to use the text entity value.
+      required: false
+      selector:
+        text:
+    message:
+      name: Message
+      description: Lock screen message; leave empty to use the text entity value.
+      required: false
+      selector:
+        text:
+    phone:
+      name: Phone
+      description: Contact phone; leave empty to use the text entity value.
+      required: false
+      selector:
+        text:

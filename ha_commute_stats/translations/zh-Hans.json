@@ -114,10 +114,10 @@
       "message": "{name}离家通知"
     },
     "arrive_message": {
-      "message": "当前位置：{addr}\n当前时间：{now}\n"
+      "message": "当前位置：{addr}\n"
     },
     "leave_message": {
-      "message": "{commute}当前位置：{addr}\n当前时间：{now}\n"
+      "message": "{commute}当前位置：{addr}\n"
     },
     "station_enter_title": {
       "message": "{name}进站通知"
@@ -126,7 +126,7 @@
       "message": "{name}出站通知"
     },
     "station_message": {
-      "message": "站点：{station}\n{commute}当前位置：{addr}\n当前时间：{now}\n"
+      "message": "站点：{station}\n{commute}当前位置：{addr}\n"
     },
     "announce_join": {
       "message": "{title}。{commute}"
@@ -146,8 +146,6 @@
           "name": "名称",
           "total_people": "总人数",
           "indoor_sensor": "室内人数传感器",
-          "notify": "通知动作",
-          "announce": "播报设备",
           "amap_key": "高德Key",
           "holiday_sensor": "今日类型"
         }
@@ -175,7 +173,11 @@
           "area_lon_min": "最小值",
           "area_lon_max": "最大值",
           "notify_arrive": "回家通知",
+          "notify_arrive_notify": "通知动作",
+          "notify_arrive_announce": "播报设备",
           "notify_leave": "离家通知",
+          "notify_leave_notify": "通知动作",
+          "notify_leave_announce": "播报设备",
           "arrive_row": "回家通知时段",
           "arrive_start": "开始",
           "arrive_end": "结束",
@@ -183,8 +185,12 @@
           "leave_start": "开始",
           "leave_end": "结束",
           "notify_station_enter": "进站通知",
+          "notify_station_enter_notify": "通知动作",
+          "notify_station_enter_announce": "播报设备",
           "station_enter_zones": "进站区域",
           "notify_station_leave": "出站通知",
+          "notify_station_leave_notify": "通知动作",
+          "notify_station_leave_announce": "播报设备",
           "station_leave_zones": "出站区域",
           "reset_home_duration": "每日重置在家时长"
         },
@@ -222,7 +228,9 @@
           "daily_reset": "每日重置",
           "monthly_reset_day": "每月重置日",
           "work_enabled": "启用上班统计",
-          "work_notify": "启用通知"
+          "work_notify": "启用通知",
+          "work_notify_notify": "通知动作",
+          "work_notify_announce": "播报设备"
         }
       }
     },
@@ -230,7 +238,8 @@
       "already_configured": "已配置通勤统计"
     },
     "error": {
-      "already_person": "该人员已添加"
+      "already_person": "该人员已添加",
+      "notify_or_announce": "通知动作和播报设备至少填写一个"
     }
   },
   "options": {
@@ -251,9 +260,6 @@
         "data": {
           "total_people": "总人数",
           "indoor_sensor": "室内人数传感器",
-          "notify": "通知动作",
-          "announce": "播报设备",
-          "test_announce": "测试播报",
           "amap_key": "高德Key",
           "holiday_sensor": "今日类型"
         }
@@ -275,7 +281,11 @@
           "area_lon_min": "最小值",
           "area_lon_max": "最大值",
           "notify_arrive": "回家通知",
+          "notify_arrive_notify": "通知动作",
+          "notify_arrive_announce": "播报设备",
           "notify_leave": "离家通知",
+          "notify_leave_notify": "通知动作",
+          "notify_leave_announce": "播报设备",
           "arrive_row": "回家通知时段",
           "arrive_start": "开始",
           "arrive_end": "结束",
@@ -283,8 +293,12 @@
           "leave_start": "开始",
           "leave_end": "结束",
           "notify_station_enter": "进站通知",
+          "notify_station_enter_notify": "通知动作",
+          "notify_station_enter_announce": "播报设备",
           "station_enter_zones": "进站区域",
           "notify_station_leave": "出站通知",
+          "notify_station_leave_notify": "通知动作",
+          "notify_station_leave_announce": "播报设备",
           "station_leave_zones": "出站区域",
           "reset_home_duration": "每日重置在家时长"
         },
@@ -349,7 +363,11 @@
           "area_lon_min": "最小值",
           "area_lon_max": "最大值",
           "notify_arrive": "回家通知",
+          "notify_arrive_notify": "通知动作",
+          "notify_arrive_announce": "播报设备",
           "notify_leave": "离家通知",
+          "notify_leave_notify": "通知动作",
+          "notify_leave_announce": "播报设备",
           "arrive_row": "回家通知时段",
           "arrive_start": "开始",
           "arrive_end": "结束",
@@ -357,8 +375,12 @@
           "leave_start": "开始",
           "leave_end": "结束",
           "notify_station_enter": "进站通知",
+          "notify_station_enter_notify": "通知动作",
+          "notify_station_enter_announce": "播报设备",
           "station_enter_zones": "进站区域",
           "notify_station_leave": "出站通知",
+          "notify_station_leave_notify": "通知动作",
+          "notify_station_leave_announce": "播报设备",
           "station_leave_zones": "出站区域",
           "reset_home_duration": "每日重置在家时长"
         },
@@ -396,7 +418,9 @@
           "daily_reset": "每日重置",
           "monthly_reset_day": "每月重置日",
           "work_enabled": "启用上班统计",
-          "work_notify": "启用通知"
+          "work_notify": "启用通知",
+          "work_notify_notify": "通知动作",
+          "work_notify_announce": "播报设备"
         }
       },
       "edit_work_rules": {
@@ -419,7 +443,9 @@
           "daily_reset": "每日重置",
           "monthly_reset_day": "每月重置日",
           "work_enabled": "启用上班统计",
-          "work_notify": "启用通知"
+          "work_notify": "启用通知",
+          "work_notify_notify": "通知动作",
+          "work_notify_announce": "播报设备"
         }
       },
       "edit_work_form": {
@@ -442,7 +468,9 @@
           "daily_reset": "每日重置",
           "monthly_reset_day": "每月重置日",
           "work_enabled": "启用上班统计",
-          "work_notify": "启用通知"
+          "work_notify": "启用通知",
+          "work_notify_notify": "通知动作",
+          "work_notify_announce": "播报设备"
         }
       },
       "edit_work": {
@@ -458,6 +486,7 @@
     },
     "error": {
       "already_person": "该人员已添加",
+      "notify_or_announce": "通知动作和播报设备至少填写一个",
       "announce_empty": "未选择播报设备",
       "announce_failed": "播报失败"
     }
@@ -471,8 +500,8 @@
     "minutes": "{minutes}分钟",
     "km_int": "{km}公里",
     "km_float": "{km}公里",
-    "clock_in_message": "离家距离：{dist}\n离家时间：{time}\n当前位置：{addr}\n当前时间：{now}",
-    "clock_out_message": "加班时长：{over_time} 小时\n调休时长：{comp_time} 小时\n当前位置：{addr}\n当前时间：{now}",
+    "clock_in_message": "离家距离：{dist}\n离家时间：{time}\n当前位置：{addr}",
+    "clock_out_message": "加班时长：{over_time} 小时\n调休时长：{comp_time} 小时\n当前位置：{addr}",
     "commute": "回家距离：{dist} 回家时间：{time}"
   },
   "selector": {

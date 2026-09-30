@@ -28,9 +28,8 @@
   "selector": {
     "menu_next": {
       "options": {
-        "global": "Global notify",
-        "cities": "Manage cities",
-        "module": "Module notify"
+        "global": "Global",
+        "cities": "Manage cities"
       }
     },
     "cities_action": {
@@ -108,10 +107,9 @@
         }
       },
       "global": {
-        "title": "Global notify",
+        "title": "Global",
         "data": {
-          "notify": "Notify action",
-          "announce": "Announce entity",
+          "enabled": "Enabled",
           "notify_enabled": "Enable notify"
         },
         "data_description": {
@@ -148,25 +146,21 @@
           "forecast_days": "Forecast days",
           "indices_enabled": "Indices",
           "api_key": "API Key",
-          "api_host": "API Host"
+          "api_host": "API Host",
+          "notify_enabled": "Enable notify",
+          "notify_start": "Notify start",
+          "notify_end": "Notify end",
+          "notify_alarm": "Alarm notify",
+          "notify_alarm_notify": "Notify action",
+          "notify_alarm_announce": "Announce device",
+          "notify_rain": "Rain notify",
+          "notify_rain_notify": "Notify action",
+          "notify_rain_announce": "Announce device"
         },
         "data_description": {
           "city": "e.g. Hangzhou",
           "interval": "Used 07:00–09:00 and 18:00–20:00; about 60 min otherwise",
-          "api_key": "Required by some providers"
-        }
-      },
-      "module": {
-        "title": "Module notify",
-        "data": {
-          "enabled": "Enabled",
-          "notify_enabled": "Notify",
-          "notify_start": "Notify start",
-          "notify_end": "Notify end",
-          "notify_alarm": "Alarm notify",
-          "notify_rain": "Rain notify"
-        },
-        "data_description": {
+          "api_key": "Required by some providers",
           "notify_alarm": "Notify when weather alarms are active",
           "notify_rain": "Notify on rain now/forecast with time and amount"
         }
@@ -181,7 +175,8 @@
     },
     "error": {
       "city_not_found": "City not found",
-      "api_key_required": "API Key required"
+      "api_key_required": "API Key required",
+      "notify_or_announce": "Fill in at least one of notify action or announce device"
     }
   }
 }

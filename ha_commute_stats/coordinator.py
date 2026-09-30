@@ -48,9 +48,17 @@ from .const import (
     CONF_LEAVE_START,
     CONF_NOTIFY,
     CONF_NOTIFY_ARRIVE,
+    CONF_NOTIFY_ARRIVE_ANNOUNCE,
+    CONF_NOTIFY_ARRIVE_NOTIFY,
     CONF_NOTIFY_LEAVE,
+    CONF_NOTIFY_LEAVE_ANNOUNCE,
+    CONF_NOTIFY_LEAVE_NOTIFY,
     CONF_NOTIFY_STATION_ENTER,
+    CONF_NOTIFY_STATION_ENTER_ANNOUNCE,
+    CONF_NOTIFY_STATION_ENTER_NOTIFY,
     CONF_NOTIFY_STATION_LEAVE,
+    CONF_NOTIFY_STATION_LEAVE_ANNOUNCE,
+    CONF_NOTIFY_STATION_LEAVE_NOTIFY,
     CONF_PEOPLE,
     CONF_PERSON,
     CONF_RESET_HOME_DURATION,
@@ -257,6 +265,13 @@ class HomeTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if person and key in person and person[key] not in (None, ""):
             return person[key]
         return self.cfg(key, default)
+
+    def _channel(
+        self, person: dict[str, Any] | None, key: str, legacy: str
+    ) -> Any:
+        if person and key in person and person[key] is not None:
+            return person[key]
+        return self.cfg(legacy)
 
     async def async_setup(self) -> None:
         stored = await self.store.async_load()
@@ -957,11 +972,10 @@ class HomeTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return rec
         if coords and self.cfg(CONF_AMAP_KEY):
             prev = self._geo_cache.get(tracker_id)
-            if (
-                prev
-                and _meters(coords[0], coords[1], prev["lon"], prev["lat"]) < 400
-            ):
-                return dict(prev["rec"])
+            if prev and _meters(coords[0], coords[1], prev["lon"], prev["lat"]) < 400:
+                cached = prev.get("rec") or {}
+                if cached.get("distance") is not None:
+                    return dict(cached)
             lon, lat = _wgs84_to_gcj02(*coords)
             addr = await self._amap_regeo(lon, lat)
             if addr:
@@ -998,6 +1012,21 @@ class HomeTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     )
                 if parts:
                     rec["commute"] = "\n".join(parts)
+                elif rec["distance"] is None:
+                    straight_m = _meters(coords[0], coords[1], dest[0], dest[1]) * 1.3
+                    km = int(straight_m / 10) / 100
+                    if km <= 0:
+                        km = round(straight_m / 1000.0, 2)
+                    mode = modes[0] if modes else MODE_DRIVING
+                    speed = 40.0 if mode == MODE_DRIVING else 15.0
+                    minutes = max(int(km / speed * 60), 1) if km > 0 else 0
+                    time_s = _fmt_minutes(self.hass, minutes)
+                    rec["distance"] = km
+                    rec["minutes"] = minutes
+                    rec["time"] = time_s
+                    rec["commute"] = tr(
+                        self.hass, "commute_home", km=km, time=time_s
+                    )
         if rec["addr"] == "unknown":
             rec["addr"] = self._entity_state(person.get(CONF_ADDR_SENSOR))
         else:
@@ -1032,7 +1061,7 @@ class HomeTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 kind="time",
                 icon="mdi:car-clock",
             )
-        if coords and self.cfg(CONF_AMAP_KEY):
+        if coords and self.cfg(CONF_AMAP_KEY) and rec.get("distance") is not None:
             self._geo_cache[tracker_id] = {
                 "lon": coords[0],
                 "lat": coords[1],
@@ -1048,10 +1077,21 @@ class HomeTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return commute if commute.endswith("\n") else f"{commute}\n"
 
     async def _async_send_notify(
-        self, title: str, message: str, person: dict[str, Any] | None = None
+        self,
+        title: str,
+        message: str,
+        person: dict[str, Any] | None = None,
+        notify_key: str = CONF_NOTIFY,
     ) -> None:
         message = str(message).replace("\\n", "\n").strip()
-        for item in _notify_items(self.cfg(CONF_NOTIFY)):
+        stamp = dt_util.now().strftime("%Y-%m-%d %H:%M:%S")
+        notify_message = f"{message}\n\n本通知 By 狂欢马克思\n通知时间: {stamp}"
+        raw = (
+            self._channel(person, notify_key, CONF_NOTIFY)
+            if notify_key != CONF_NOTIFY
+            else self.cfg(CONF_NOTIFY)
+        )
+        for item in _notify_items(raw):
             action = None
             data: dict[str, Any] = {}
             target = None
@@ -1064,7 +1104,7 @@ class HomeTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if not action or "." not in action:
                 continue
             data["title"] = title
-            data["message"] = message
+            data["message"] = notify_message
             domain, service = action.split(".", 1)
             try:
                 if self.hass.services.has_service(domain, service):
@@ -1075,16 +1115,24 @@ class HomeTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     await self.hass.services.async_call(
                         "notify",
                         "send_message",
-                        {"entity_id": action, "title": title, "message": message},
+                        {"entity_id": action, "title": title, "message": notify_message},
                         blocking=False,
                     )
             except Exception:
                 _LOGGER.exception("通知动作执行失败")
 
     async def _async_announce(
-        self, message: str, person: dict[str, Any] | None = None
+        self,
+        message: str,
+        person: dict[str, Any] | None = None,
+        announce_key: str = CONF_ANNOUNCE,
     ) -> None:
-        await async_announce(self.hass, self.cfg(CONF_ANNOUNCE), message)
+        targets = (
+            self._channel(person, announce_key, CONF_ANNOUNCE)
+            if announce_key != CONF_ANNOUNCE
+            else self.cfg(CONF_ANNOUNCE)
+        )
+        await async_announce(self.hass, targets, message)
 
     async def _async_notify(
         self,
@@ -1125,22 +1173,24 @@ class HomeTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         name = person.get("name") or tr(self.hass, "person")
         addr = geo.get("addr") or "unknown"
         commute = self._notify_commute(geo)
-        now_s = dt_util.now().strftime("%Y-%m-%d %H:%M:%S")
         if arrive:
             title = tr(self.hass, "arrive_title", name=name)
             message = tr(
                 self.hass,
                 "arrive_message",
                 addr=addr,
-                now=now_s,
             )
         else:
             title = tr(self.hass, "leave_title", name=name)
             message = tr(
-                self.hass, "leave_message", addr=addr, commute=commute, now=now_s
+                self.hass, "leave_message", addr=addr, commute=commute
             )
-        await self._async_send_notify(title, message, person)
-        await self._async_announce(speech_text(title, message), person)
+        notify_key = CONF_NOTIFY_ARRIVE_NOTIFY if arrive else CONF_NOTIFY_LEAVE_NOTIFY
+        announce_key = (
+            CONF_NOTIFY_ARRIVE_ANNOUNCE if arrive else CONF_NOTIFY_LEAVE_ANNOUNCE
+        )
+        await self._async_send_notify(title, message, person, notify_key)
+        await self._async_announce(speech_text(title, message), person, announce_key)
 
     async def _async_notify_station(
         self, tracker_id: str, enter: bool, station: str
@@ -1160,7 +1210,6 @@ class HomeTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         name = person.get("name") or tr(self.hass, "person")
         addr = geo.get("addr") or "unknown"
         commute = self._notify_commute(geo)
-        now_s = dt_util.now().strftime("%Y-%m-%d %H:%M:%S")
         if enter:
             title = tr(self.hass, "station_enter_title", name=name)
         else:
@@ -1171,10 +1220,19 @@ class HomeTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             station=station,
             addr=addr,
             commute=commute,
-            now=now_s,
         )
-        await self._async_send_notify(title, message, person)
-        await self._async_announce(speech_text(title, message), person)
+        notify_key = (
+            CONF_NOTIFY_STATION_ENTER_NOTIFY
+            if enter
+            else CONF_NOTIFY_STATION_LEAVE_NOTIFY
+        )
+        announce_key = (
+            CONF_NOTIFY_STATION_ENTER_ANNOUNCE
+            if enter
+            else CONF_NOTIFY_STATION_LEAVE_ANNOUNCE
+        )
+        await self._async_send_notify(title, message, person, notify_key)
+        await self._async_announce(speech_text(title, message), person, announce_key)
 
     async def async_set_away(self, tracker_id: str, on: bool, *, notify: bool = False) -> None:
         was_away = bool((self._data.get("away") or {}).get(tracker_id))

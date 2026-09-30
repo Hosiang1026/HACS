@@ -28,6 +28,12 @@ from .const import (
     CONF_ACW_TC,
     CONF_JSESSIONID,
     CONF_LOGIN_AT,
+    CONF_NOTIFY_INSPECT,
+    CONF_NOTIFY_INSURANCE,
+    CONF_NOTIFY_LICENSE,
+    CONF_NOTIFY_MAINT,
+    CONF_NOTIFY_VIOLATION,
+    CONF_NOTIFY_YEARLY,
     CONF_SF,
     CONF_URL,
     DOMAIN,
@@ -47,7 +53,7 @@ from .helpers import (
     cfg_maint_days,
     cfg_maint_km,
     cfg_name,
-    cfg_notify_actions,
+    cfg_notify_has_target,
     cfg_purchase_date,
     cfg_notify_inspect,
     cfg_notify_insurance,
@@ -741,9 +747,6 @@ class CarStatsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.push()
         await self.async_persist_snapshot()
 
-    def _now_str(self) -> str:
-        return dt_util.now().strftime("%Y-%m-%d %H:%M:%S")
-
     def _plate(self) -> str:
         plate = (self.data or {}).get("vehicle", {}).get("plate")
         return plate or cfg_name(self.entry)
@@ -791,6 +794,7 @@ class CarStatsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self.entry,
                 "汽车违章通知",
                 f"车牌：{self._plate()}\n" + "\n\n".join(lines),
+                CONF_NOTIFY_VIOLATION,
             ):
                 return
         merged = list(known_set | {k for k in keys if k})
@@ -865,8 +869,8 @@ class CarStatsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 f"加油次数：{fuel_count}次\n"
                 f"油费：{round(fuel, 2)}元\n"
                 f"高速费：{round(etc, 2)}元\n"
-                f"总费用：{round(total, 2)}元\n"
-                f"当前时间：{self._now_str()}",
+                f"总费用：{round(total, 2)}元",
+                CONF_NOTIFY_YEARLY,
             )
 
         if need_close:
@@ -874,7 +878,7 @@ class CarStatsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if already:
                     mark_notified = True
                     advance_year = True
-                elif not cfg_notify_yearly(self.entry) or not cfg_notify_actions(self.entry):
+                elif not cfg_notify_yearly(self.entry) or not cfg_notify_has_target(self.entry, CONF_NOTIFY_YEARLY):
                     mark_notified = True
                     advance_year = True
                 elif await _try_yearly_notify():
@@ -884,7 +888,7 @@ class CarStatsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 mark_notified = True
                 advance_year = True
         elif is_new_year_day and not already:
-            if not cfg_notify_yearly(self.entry) or not cfg_notify_actions(self.entry):
+            if not cfg_notify_yearly(self.entry) or not cfg_notify_has_target(self.entry, CONF_NOTIFY_YEARLY):
                 mark_notified = True
             elif await _try_yearly_notify():
                 mark_notified = True
@@ -925,8 +929,8 @@ class CarStatsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     "汽车保养到期通知",
                     f"车牌：{self._plate()}\n"
                     f"剩余里程：{km_left}公里\n"
-                    f"剩余天数：{days_left}天\n"
-                    f"当前时间：{self._now_str()}",
+                    f"剩余天数：{days_left}天",
+                    CONF_NOTIFY_MAINT,
                 ):
                     await self.store.update_fields(self.entry.entry_id, last_maint_notify=today)
         ins_expiry = cfg_insurance_expiry(self.entry)
@@ -943,8 +947,8 @@ class CarStatsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "汽车保险到期通知",
                 f"车牌：{self._plate()}\n"
                 f"到期日期：{ins_expiry}\n"
-                f"剩余天数：{ins_days}天\n"
-                f"当前时间：{self._now_str()}",
+                f"剩余天数：{ins_days}天",
+                CONF_NOTIFY_INSURANCE,
             ):
                 await self.store.update_fields(self.entry.entry_id, last_insure_notify=today)
         inspect_expiry = cfg_inspect_expiry(self.entry)
@@ -961,8 +965,8 @@ class CarStatsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "汽车年检到期通知",
                 f"车牌：{self._plate()}\n"
                 f"到期日期：{inspect_expiry}\n"
-                f"剩余天数：{inspect_days}天\n"
-                f"当前时间：{self._now_str()}",
+                f"剩余天数：{inspect_days}天",
+                CONF_NOTIFY_INSPECT,
             ):
                 await self.store.update_fields(self.entry.entry_id, last_inspect_notify=today)
         license_expiry = ((self.data or {}).get("license") or {}).get("expiry")
@@ -979,7 +983,7 @@ class CarStatsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "汽车驾驶证到期通知",
                 f"车牌：{self._plate()}\n"
                 f"到期日期：{license_expiry}\n"
-                f"剩余天数：{license_days}天\n"
-                f"当前时间：{self._now_str()}",
+                f"剩余天数：{license_days}天",
+                CONF_NOTIFY_LICENSE,
             ):
                 await self.store.update_fields(self.entry.entry_id, last_license_notify=today)

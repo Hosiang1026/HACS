@@ -5,14 +5,21 @@ from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 
 from .helpers import cfg_announce, cfg_notify_actions
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def send_announce(hass: HomeAssistant, entry: ConfigEntry, text: str) -> None:
-    players = cfg_announce(entry)
+def _append_notify_footer(message: str) -> str:
+    stamp = dt_util.now().strftime("%Y-%m-%d %H:%M:%S")
+    base = str(message).replace("\\n", "\n").strip()
+    return f"{base}\n\n本通知 By 狂欢马克思\n通知时间: {stamp}"
+
+
+async def send_announce(hass: HomeAssistant, entry: ConfigEntry, text: str, kind: str) -> None:
+    players = cfg_announce(entry, kind)
     if not players or not text:
         return
     for eid in players:
@@ -47,8 +54,9 @@ async def send_announce(hass: HomeAssistant, entry: ConfigEntry, text: str) -> N
             _LOGGER.exception("announce failed: %s", eid)
 
 
-async def send_notify(hass: HomeAssistant, entry: ConfigEntry, title: str, message: str) -> bool:
-    raw = cfg_notify_actions(entry)
+async def send_notify(hass: HomeAssistant, entry: ConfigEntry, title: str, message: str, kind: str) -> bool:
+    raw = cfg_notify_actions(entry, kind)
+    notify_message = _append_notify_footer(message)
     if not raw:
         sent = True
     elif isinstance(raw, (str, dict)):
@@ -73,7 +81,7 @@ async def send_notify(hass: HomeAssistant, entry: ConfigEntry, title: str, messa
                 continue
             any_target = True
             data["title"] = title
-            data["message"] = message
+            data["message"] = notify_message
             domain, service = action.split(".", 1)
             try:
                 if hass.services.has_service(domain, service):
@@ -85,7 +93,7 @@ async def send_notify(hass: HomeAssistant, entry: ConfigEntry, title: str, messa
                     await hass.services.async_call(
                         "notify",
                         "send_message",
-                        {"entity_id": action, "title": title, "message": message},
+                        {"entity_id": action, "title": title, "message": notify_message},
                         blocking=True,
                     )
                     sent = True
@@ -94,5 +102,5 @@ async def send_notify(hass: HomeAssistant, entry: ConfigEntry, title: str, messa
             except Exception:
                 _LOGGER.exception("notify failed: %s", action)
     text = f"{title}，{message.replace(chr(10), '，')}"
-    await send_announce(hass, entry, text)
+    await send_announce(hass, entry, text, kind)
     return sent if any_target else True

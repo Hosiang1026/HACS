@@ -43,6 +43,7 @@ _TITLES = {
     "kl8": "🎱快乐8",
     "qlc": "🎱七乐彩",
 }
+_NOTIFY_ORDER = ("3d", "ssq", "kl8", "qlc")
 
 
 def _has_val(value: Any) -> bool:
@@ -63,7 +64,7 @@ def _predict_lines(predict: dict[str, Any] | None) -> list[str]:
     return lines
 
 
-def _item_lines(t: str, item: dict[str, Any], predict_on: bool) -> list[str]:
+def _item_lines(t: str, item: dict[str, Any]) -> list[str]:
     code = str(item.get("code") or "")
     lines = [f"· 开奖期号: {code}"]
     if item.get("date"):
@@ -86,10 +87,47 @@ def _item_lines(t: str, item: dict[str, Any], predict_on: bool) -> list[str]:
         lines.append(f"· 中奖号码: {item.get('red')}")
     if _has_val(item.get("content")):
         lines.append(f"· 中奖情况: {item.get('content')}")
-    if t == LOTTERY_SSQ and predict_on:
-        predict = item.get("predict") if isinstance(item.get("predict"), dict) else None
-        lines.extend(_predict_lines(predict))
     return lines
+
+
+def _notify_order(types: list[str], keys: set[str] | dict[str, Any]) -> list[str]:
+    selected = [t for t in types if t in keys]
+    rank = {name: idx for idx, name in enumerate(_NOTIFY_ORDER)}
+    return sorted(selected, key=lambda t: rank.get(t, len(_NOTIFY_ORDER)))
+
+
+def _compose_notify(
+    order: list[str],
+    data: dict[str, Any],
+    pending: dict[str, dict[str, Any]],
+    predict_on: bool,
+) -> tuple[str, str]:
+    predict = None
+    if len(order) == 1:
+        t = order[0]
+        item = data.get(t) or pending[t]
+        lines = _item_lines(t, item)
+        if t == LOTTERY_SSQ and predict_on:
+            raw = item.get("predict")
+            lines.extend(_predict_lines(raw if isinstance(raw, dict) else None))
+        return _TITLES.get(t, _NAMES.get(t, t)), format_notify(*lines)
+
+    blocks: list[str] = []
+    for t in order:
+        item = data.get(t) or pending[t]
+        head = _TITLES.get(t, _NAMES.get(t, t))
+        blocks.append("\n".join([head, *_item_lines(t, item)]))
+        if t == LOTTERY_SSQ and predict_on:
+            raw = item.get("predict")
+            if isinstance(raw, dict):
+                predict = raw
+    if predict:
+        extra = _predict_lines(predict)
+        while extra and extra[0] == "":
+            extra = extra[1:]
+        if extra:
+            blocks.append("\n".join(extra))
+    return "🎱福利彩票", "\n\n".join(blocks)
 
 
 class LotteryCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -182,23 +220,12 @@ class LotteryCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             dt_util.now(), types, {**self._pending_notify, **data}
         ):
             return
-        order = [t for t in types if t in self._pending_notify]
+        order = _notify_order(list(types), self._pending_notify)
         if not order:
             return
-        if len(order) == 1:
-            t = order[0]
-            item = data.get(t) or self._pending_notify[t]
-            title = _TITLES.get(t, _NAMES.get(t, t))
-            message = format_notify(*_item_lines(t, item, predict_on))
-        else:
-            title = "🎱福利彩票"
-            blocks: list[str] = []
-            for t in order:
-                item = data.get(t) or self._pending_notify[t]
-                head = _TITLES.get(t, _NAMES.get(t, t))
-                body = _item_lines(t, item, predict_on)
-                blocks.append("\n".join([head, *body]))
-            message = "\n\n".join(blocks)
+        title, message = _compose_notify(
+            order, data, self._pending_notify, predict_on
+        )
         await async_send_notify(
             self.hass,
             self.entry_opts,

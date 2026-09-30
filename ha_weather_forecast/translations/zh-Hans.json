@@ -28,9 +28,8 @@
   "selector": {
     "menu_next": {
       "options": {
-        "global": "全局通知",
-        "cities": "城市管理",
-        "module": "模块通知"
+        "global": "全局",
+        "cities": "城市管理"
       }
     },
     "cities_action": {
@@ -108,10 +107,9 @@
         }
       },
       "global": {
-        "title": "全局通知",
+        "title": "全局",
         "data": {
-          "notify": "通知动作",
-          "announce": "播报实体",
+          "enabled": "启用",
           "notify_enabled": "启用通知"
         },
         "data_description": {
@@ -148,25 +146,21 @@
           "forecast_days": "预报天数",
           "indices_enabled": "生活指数",
           "api_key": "API Key",
-          "api_host": "API Host"
+          "api_host": "API Host",
+          "notify_enabled": "启用通知",
+          "notify_start": "通知开始",
+          "notify_end": "通知结束",
+          "notify_alarm": "预警通知",
+          "notify_alarm_notify": "通知动作",
+          "notify_alarm_announce": "播报设备",
+          "notify_rain": "降雨通知",
+          "notify_rain_notify": "通知动作",
+          "notify_rain_announce": "播报设备"
         },
         "data_description": {
           "city": "如 杭州、余杭",
           "interval": "07:00–09:00、18:00–20:00 使用此间隔；其余时段约 60 分钟",
-          "api_key": "部分数据源需要"
-        }
-      },
-      "module": {
-        "title": "模块通知",
-        "data": {
-          "enabled": "启用",
-          "notify_enabled": "模块通知",
-          "notify_start": "通知开始",
-          "notify_end": "通知结束",
-          "notify_alarm": "预警通知",
-          "notify_rain": "降雨通知"
-        },
-        "data_description": {
+          "api_key": "部分数据源需要",
           "notify_alarm": "有预警时推送通知",
           "notify_rain": "预报/实况有雨时推送，含时间与雨量"
         }
@@ -181,7 +175,8 @@
     },
     "error": {
       "city_not_found": "未找到城市，请换个关键词",
-      "api_key_required": "该数据源需要填写 API Key"
+      "api_key_required": "该数据源需要填写 API Key",
+      "notify_or_announce": "通知动作和播报设备至少填写一个"
     }
   }
 }

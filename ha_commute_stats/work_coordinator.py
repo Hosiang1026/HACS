@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, time, timedelta
 import logging
 import math
+import re
 from typing import Any
 
 from aiohttp import ClientTimeout
@@ -47,8 +48,11 @@ from .const import (
     CONF_OVER_WAGE,
     CONF_OVERTIME_START,
     CONF_PERSON,
+    CONF_PEOPLE,
     CONF_STANDARD_HOURS,
     CONF_WORK_NOTIFY,
+    CONF_WORK_NOTIFY_ANNOUNCE,
+    CONF_WORK_NOTIFY_NOTIFY,
     CONF_WORK_ZONES,
     DEFAULT_BASE_SALARY,
     DEFAULT_CLOCK_IN_END,
@@ -104,6 +108,18 @@ def _as_list(value: Any) -> list:
     if isinstance(value, str):
         return [value]
     return list(value)
+
+
+def _entity_ids(value: Any) -> list[str]:
+    out: list[str] = []
+    for item in _as_list(value):
+        if isinstance(item, str) and item:
+            out.append(item)
+        elif isinstance(item, dict):
+            eid = item.get("entity_id") or item.get("value")
+            if isinstance(eid, str) and eid:
+                out.append(eid)
+    return out
 
 
 def _nget(tr: dict[str, str], key: str, default: str, **kwargs: Any) -> str:
@@ -271,7 +287,66 @@ def _latlon(state) -> tuple[float, float] | None:
     lon = state.attributes.get("longitude")
     if lat is None or lon is None:
         return None
-    return float(lon), float(lat)
+    try:
+        return float(lon), float(lat)
+    except (TypeError, ValueError):
+        return None
+
+
+def _parse_km(value: Any) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = str(value).strip().lower()
+    if not text or text in ("unknown", "unavailable", "未知", "none"):
+        return None
+    for token in text.replace("公里", " ").replace("km", " ").split():
+        try:
+            return float(token)
+        except ValueError:
+            continue
+    return None
+
+
+def _parse_minutes(value: Any) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return int(value)
+    text = str(value).strip().lower()
+    if not text or text in ("unknown", "unavailable", "未知", "none", "0m", "0分钟"):
+        if text in ("0m", "0分钟"):
+            return 0
+        return None
+    days = hours = mins = 0
+
+    m = re.search(r"(\d+)\s*天", text)
+    if m:
+        days = int(m.group(1))
+    m = re.search(r"(\d+)\s*小时", text)
+    if m:
+        hours = int(m.group(1))
+    m = re.search(r"(\d+)\s*分钟", text)
+    if m:
+        mins = int(m.group(1))
+    if days or hours or mins:
+        return days * 24 * 60 + hours * 60 + mins
+    m = re.search(r"(\d+)\s*d", text)
+    if m:
+        days = int(m.group(1))
+    m = re.search(r"(\d+)\s*h", text)
+    if m:
+        hours = int(m.group(1))
+    m = re.search(r"(\d+)\s*m", text)
+    if m:
+        mins = int(m.group(1))
+    if days or hours or mins:
+        return days * 24 * 60 + hours * 60 + mins
+    try:
+        return int(float(text))
+    except ValueError:
+        return None
 
 
 def _seconds_between(start: time, end: time) -> float:
@@ -349,9 +424,23 @@ class WorkTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             ):
                 return self.person[key]
             return default
-        if key in self.person and self.person[key] not in (None, ""):
-            return self.person[key]
+        person = self._live_person()
+        if key in person and person[key] not in (None, ""):
+            return person[key]
         return default
+
+    def _channel(self, key: str, legacy: str) -> Any:
+        person = self._live_person()
+        if key in person and person[key] is not None:
+            return person[key]
+        return self.cfg(legacy)
+
+    def _live_person(self) -> dict[str, Any]:
+        pid = self.person.get(CONF_PERSON)
+        for person in self.entry.options.get(CONF_PEOPLE, []) or []:
+            if person.get(CONF_PERSON) == pid:
+                return person
+        return self.person
 
     def update_person(self, person: dict[str, Any]) -> None:
         self.person = person
@@ -446,7 +535,7 @@ class WorkTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def _home_zone_names(self) -> set[str]:
         names: set[str] = set()
-        for zid in _as_list(self.cfg(CONF_HOME_ZONES, [])):
+        for zid in _entity_ids(self.cfg(CONF_HOME_ZONES, [])):
             state = self.hass.states.get(zid)
             names.add(zid.split(".", 1)[-1])
             if not state:
@@ -465,7 +554,7 @@ class WorkTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def _in_home(self) -> bool:
         tracker = self.cfg(CONF_PERSON)
-        zones = _as_list(self.cfg(CONF_HOME_ZONES, []))
+        zones = _entity_ids(self.cfg(CONF_HOME_ZONES, []))
         if not tracker or not zones:
             return False
         state = self.hass.states.get(tracker)
@@ -475,7 +564,17 @@ class WorkTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def _home_zones_lnglat(self) -> list[tuple[float, float]]:
         out: list[tuple[float, float]] = []
-        for zid in _as_list(self.cfg(CONF_HOME_ZONES, [])):
+        for zid in _entity_ids(self.cfg(CONF_HOME_ZONES, [])):
+            loc = _latlon(self.hass.states.get(zid))
+            if loc:
+                out.append(loc)
+            else:
+                _LOGGER.debug("home zone has no coordinates: %s", zid)
+        return out
+
+    def _work_zones_lnglat(self) -> list[tuple[float, float]]:
+        out: list[tuple[float, float]] = []
+        for zid in _entity_ids(self.cfg(CONF_WORK_ZONES, [])):
             loc = _latlon(self.hass.states.get(zid))
             if loc:
                 out.append(loc)
@@ -484,16 +583,16 @@ class WorkTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _home_lnglat(
         self, origin: tuple[float, float] | None = None
     ) -> tuple[float, float] | None:
-        zones = self._home_zones_lnglat()
+        zones = list(self._home_zones_lnglat())
         if not zones:
-            loc = _latlon(self.hass.states.get("zone.home"))
-            if loc:
-                zones = [loc]
-            else:
-                lat = self.hass.config.latitude
-                lon = self.hass.config.longitude
-                if lat is not None and lon is not None:
-                    zones = [(float(lon), float(lat))]
+            home = _latlon(self.hass.states.get("zone.home"))
+            if home:
+                zones = [home]
+        if not zones:
+            lat = self.hass.config.latitude
+            lon = self.hass.config.longitude
+            if lat is not None and lon is not None:
+                zones = [(float(lon), float(lat))]
         if not zones:
             return None
         if origin is None:
@@ -503,11 +602,39 @@ class WorkTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             key=lambda z: _haversine_km(origin[0], origin[1], z[0], z[1]),
         )
 
-    def _near_home(self, origin: tuple[float, float]) -> bool:
-        return any(
-            _haversine_km(origin[0], origin[1], z[0], z[1]) <= 0.4
-            for z in self._home_zones_lnglat()
+    def _route_origin(
+        self, person_origin: tuple[float, float] | None
+    ) -> tuple[float, float] | None:
+        works = self._work_zones_lnglat()
+        tracker = self.cfg(CONF_PERSON)
+        state = self.hass.states.get(tracker) if tracker else None
+        at_company = self._in_company(state.state if state else None)
+        if at_company and works:
+            if person_origin is None:
+                return works[0]
+            return min(
+                works,
+                key=lambda z: _haversine_km(
+                    person_origin[0], person_origin[1], z[0], z[1]
+                ),
+            )
+        return person_origin
+
+    def _read_commute_sensors(self) -> tuple[float | None, int | None]:
+        dist_eid = self._first_entity(CONF_COMMUTE_DISTANCE)
+        time_eid = self._first_entity(CONF_COMMUTE_TIME)
+        dist_state = self.hass.states.get(dist_eid) if dist_eid else None
+        time_state = self.hass.states.get(time_eid) if time_eid else None
+        return (
+            _parse_km(dist_state.state if dist_state else None),
+            _parse_minutes(time_state.state if time_state else None),
         )
+
+    def _near_home(self, origin: tuple[float, float]) -> bool:
+        home = self._home_lnglat(origin)
+        if home is None:
+            return False
+        return _haversine_km(origin[0], origin[1], home[0], home[1]) <= 0.4
 
     def _is_at_home(self, origin: tuple[float, float] | None) -> bool:
         if self._in_home():
@@ -749,7 +876,6 @@ class WorkTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "{name} clock-in" if clock_in else "{name} clock-out",
             name=self.person_name,
         )
-        now_s = dt_util.now().strftime("%Y-%m-%d %H:%M:%S")
         dist = _fmt_km(loc["distance"], tr) if loc["distance"] is not None else unknown
         time_s = (
             _fmt_minutes(loc["time"], tr) if loc["time"] is not None else unknown
@@ -758,22 +884,20 @@ class WorkTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             message = _nget(
                 tr,
                 "clock_in_message",
-                "Distance from home: {dist}\nTravel time: {time}\nLocation: {addr}\nTime: {now}",
+                "Distance from home: {dist}\nTravel time: {time}\nLocation: {addr}",
                 dist=dist,
                 time=time_s,
                 addr=loc["addr"],
-                now=now_s,
             )
         else:
             data = self._computed()
             message = _nget(
                 tr,
                 "clock_out_message",
-                "Overtime: {over_time} h\nComp time: {comp_time} h\nLocation: {addr}\nTime: {now}",
+                "Overtime: {over_time} h\nComp time: {comp_time} h\nLocation: {addr}",
                 over_time=data["over_time"],
                 comp_time=data["comp_time"],
                 addr=loc["addr"],
-                now=now_s,
             )
         body = message.replace("\\n", "\n").strip()
         await self._send_notify(title, body)
@@ -870,8 +994,31 @@ class WorkTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         unknown = _nget(tr, "unknown", "unknown")
         no_commute = _nget(tr, "no_commute", "no commute")
-        origin = self._person_lnglat()
-        if self._is_at_home(origin):
+        prev_dist, prev_time = self._read_commute_sensors()
+        person_origin = self._person_lnglat()
+        origin = self._route_origin(person_origin) or person_origin
+        tracker = self.cfg(CONF_PERSON)
+        home = (self.hass.data.get(DOMAIN) or {}).get(self.entry.entry_id, {}).get(
+            "home"
+        )
+        if home and tracker and not self._is_at_home(person_origin):
+            try:
+                geo = await home._async_update_geo(tracker)
+                if geo.get("distance") is not None:
+                    minutes = geo.get("minutes")
+                    if minutes is None:
+                        minutes = _parse_minutes(geo.get("time"))
+                    loc = {
+                        "addr": geo.get("addr") or unknown,
+                        "distance": geo["distance"],
+                        "time": minutes if minutes is not None else 0,
+                        "commute": geo.get("commute") or unknown,
+                    }
+                    await self._write_loc(loc)
+                    return loc
+            except Exception:
+                _LOGGER.exception("reuse home geo failed for %s", self.person_name)
+        if self._is_at_home(person_origin):
             loc = {
                 "addr": unknown,
                 "distance": 0,
@@ -879,8 +1026,8 @@ class WorkTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "commute": no_commute,
             }
             key = self.cfg(CONF_AMAP_KEY)
-            if key and origin:
-                src = _wgs84_to_gcj02(*origin)
+            if key and person_origin:
+                src = _wgs84_to_gcj02(*person_origin)
                 regeo = await self._amap_get(
                     "https://restapi.amap.com/v3/geocode/regeo",
                     {"key": key, "location": f"{src[0]:.6f},{src[1]:.6f}"},
@@ -897,7 +1044,21 @@ class WorkTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return loc
         loc = {"addr": unknown, "distance": None, "time": None, "commute": unknown}
         key = self.cfg(CONF_AMAP_KEY)
+        regeo_origin = person_origin or origin
+        if key and regeo_origin:
+            src = _wgs84_to_gcj02(*regeo_origin)
+            regeo = await self._amap_get(
+                "https://restapi.amap.com/v3/geocode/regeo",
+                {"key": key, "location": f"{src[0]:.6f},{src[1]:.6f}"},
+            )
+            if regeo and str(regeo.get("status")) == "1":
+                addr = (regeo.get("regeocode") or {}).get("formatted_address")
+                if addr and not isinstance(addr, list):
+                    loc["addr"] = addr
         if not key or not origin:
+            if loc["distance"] is None and prev_dist is not None:
+                loc["distance"] = prev_dist
+                loc["time"] = prev_time if prev_time is not None else 0
             await self._write_loc(loc)
             return loc
         dest = self._home_lnglat(origin)
@@ -911,19 +1072,12 @@ class WorkTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             <= 0.4
             and dest == self._amap_dest
             and mode == self._amap_mode
+            and self._amap_loc.get("distance") is not None
         ):
             await self._write_loc(self._amap_loc)
             return self._amap_loc
-        src = _wgs84_to_gcj02(*origin)
-        regeo = await self._amap_get(
-            "https://restapi.amap.com/v3/geocode/regeo",
-            {"key": key, "location": f"{src[0]:.6f},{src[1]:.6f}"},
-        )
-        if regeo and str(regeo.get("status")) == "1":
-            addr = (regeo.get("regeocode") or {}).get("formatted_address")
-            if addr and not isinstance(addr, list):
-                loc["addr"] = addr
         if dest:
+            src = _wgs84_to_gcj02(*origin)
             dst = _wgs84_to_gcj02(*dest)
             route_mode = mode or TRAVEL_DRIVING
             result = await self._amap_route(key, route_mode, src, dst)
@@ -936,17 +1090,33 @@ class WorkTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             else:
                 km = round(_haversine_km(origin[0], origin[1], dest[0], dest[1]) * 1.3, 1)
                 minutes = _estimate_minutes(km, route_mode)
-            if km > 0:
-                loc["distance"] = km
-                loc["time"] = minutes
-                loc["commute"] = _nget(
-                    tr,
-                    "commute",
-                    "Home distance: {dist} Travel time: {time}",
-                    dist=_fmt_km(km, tr),
-                    time=_fmt_minutes(minutes, tr),
-                )
-                mode = route_mode
+            loc["distance"] = km
+            loc["time"] = minutes
+            loc["commute"] = _nget(
+                tr,
+                "commute",
+                "Home distance: {dist} Travel time: {time}",
+                dist=_fmt_km(km, tr),
+                time=_fmt_minutes(minutes, tr),
+            )
+            mode = route_mode
+        else:
+            _LOGGER.warning(
+                "work location: home zones=%s resolved=%s for %s",
+                _entity_ids(self.cfg(CONF_HOME_ZONES, [])),
+                self._home_zones_lnglat(),
+                self.person_name,
+            )
+        if loc["distance"] is None and prev_dist is not None:
+            loc["distance"] = prev_dist
+            loc["time"] = prev_time if prev_time is not None else 0
+            loc["commute"] = _nget(
+                tr,
+                "commute",
+                "Home distance: {dist} Travel time: {time}",
+                dist=_fmt_km(prev_dist, tr),
+                time=_fmt_minutes(loc["time"], tr),
+            )
         if loc["addr"] != unknown and loc["distance"] is not None:
             self._amap_origin = origin
             self._amap_dest = dest
@@ -1084,10 +1254,12 @@ class WorkTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             _LOGGER.exception("write entity failed: %s", entity_id)
 
     async def _send_notify(self, title: str, message: str) -> None:
-        raw = self.cfg(CONF_NOTIFY)
+        raw = self._channel(CONF_WORK_NOTIFY_NOTIFY, CONF_NOTIFY)
         if not raw:
             return
         message = str(message).replace("\\n", "\n").strip()
+        stamp = dt_util.now().strftime("%Y-%m-%d %H:%M:%S")
+        notify_message = f"{message}\n\n本通知 By 狂欢马克思\n通知时间: {stamp}"
         if isinstance(raw, (str, dict)):
             items = [raw]
         else:
@@ -1105,7 +1277,7 @@ class WorkTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if not action or "." not in action:
                 continue
             data["title"] = title
-            data["message"] = message
+            data["message"] = notify_message
             domain, service = action.split(".", 1)
             try:
                 if self.hass.services.has_service(domain, service):
@@ -1116,14 +1288,16 @@ class WorkTimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     await self.hass.services.async_call(
                         "notify",
                         "send_message",
-                        {"entity_id": action, "title": title, "message": message},
+                        {"entity_id": action, "title": title, "message": notify_message},
                         blocking=False,
                     )
             except Exception:
                 _LOGGER.exception("notify failed: %s", action)
 
     async def _broadcast(self, text: str) -> None:
-        await async_announce(self.hass, self.cfg(CONF_ANNOUNCE), text)
+        await async_announce(
+            self.hass, self._channel(CONF_WORK_NOTIFY_ANNOUNCE, CONF_ANNOUNCE), text
+        )
 
     async def async_set_start_time(self, value: str) -> None:
         self._data["start_time"] = value

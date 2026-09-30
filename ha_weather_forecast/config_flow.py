@@ -26,7 +26,6 @@ from homeassistant.helpers.selector import (
 
 from .city_resolve import async_search_cities, build_weather_instance, pick_label
 from .const import (
-    CONF_ANNOUNCE,
     CONF_API_HOST,
     CONF_API_KEY,
     CONF_ENABLED,
@@ -35,11 +34,14 @@ from .const import (
     CONF_INSTANCES,
     CONF_INTERVAL,
     CONF_LOCATION,
-    CONF_NOTIFY,
     CONF_NOTIFY_ALARM,
+    CONF_NOTIFY_ALARM_ANNOUNCE,
+    CONF_NOTIFY_ALARM_NOTIFY,
     CONF_NOTIFY_ENABLED,
     CONF_NOTIFY_END,
     CONF_NOTIFY_RAIN,
+    CONF_NOTIFY_RAIN_ANNOUNCE,
+    CONF_NOTIFY_RAIN_NOTIFY,
     CONF_NOTIFY_START,
     CONF_PROVIDER,
     CONF_SLUG,
@@ -86,6 +88,46 @@ def _notify_options(hass: HomeAssistant | None, current: Any = None) -> list[str
     return sorted(names)
 
 
+def _notify_selector(hass: HomeAssistant | None, current: Any) -> SelectSelector:
+    return SelectSelector(
+        SelectSelectorConfig(
+            options=_notify_options(hass, current),
+            multiple=True,
+            custom_value=True,
+            mode=SelectSelectorMode.DROPDOWN,
+        )
+    )
+
+
+def _announce_selector() -> EntitySelector:
+    return EntitySelector(
+        EntitySelectorConfig(domain=["media_player", "tts", "text", "input_text"])
+    )
+
+
+def _channel_fields(
+    hass: HomeAssistant | None,
+    notify_key: str,
+    notify_current: Any,
+    announce_key: str,
+    announce_current: Any,
+) -> dict[Any, Any]:
+    notify = _notify_values(notify_current)
+    announce = announce_current if isinstance(announce_current, str) and announce_current else None
+    notify_field = (
+        vol.Optional(notify_key, default=notify) if notify else vol.Optional(notify_key)
+    )
+    announce_field = (
+        vol.Optional(announce_key, default=announce)
+        if announce
+        else vol.Optional(announce_key)
+    )
+    return {
+        notify_field: _notify_selector(hass, notify),
+        announce_field: _announce_selector(),
+    }
+
+
 def _city_options(instances: list[dict[str, Any]]) -> list[dict[str, str]]:
     opts: list[dict[str, str]] = []
     for idx, inst in enumerate(instances):
@@ -127,8 +169,6 @@ class WeatherForecastConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._data = {
                 CONF_NAME: user_input.get(CONF_NAME) or DEFAULT_NAME,
-                CONF_NOTIFY: _notify_values(user_input.get(CONF_NOTIFY)),
-                CONF_ANNOUNCE: user_input.get(CONF_ANNOUNCE),
                 CONF_NOTIFY_ENABLED: user_input.get(
                     CONF_NOTIFY_ENABLED, DEFAULT_NOTIFY_ENABLED
                 ),
@@ -138,19 +178,6 @@ class WeatherForecastConfigFlow(ConfigFlow, domain=DOMAIN):
         schema = vol.Schema(
             {
                 vol.Required(CONF_NAME, default=DEFAULT_NAME): TextSelector(),
-                vol.Optional(CONF_NOTIFY): SelectSelector(
-                    SelectSelectorConfig(
-                        options=_notify_options(self.hass),
-                        multiple=True,
-                        custom_value=True,
-                        mode=SelectSelectorMode.DROPDOWN,
-                    )
-                ),
-                vol.Optional(CONF_ANNOUNCE): EntitySelector(
-                    EntitySelectorConfig(
-                        domain=["media_player", "tts", "text", "input_text"]
-                    )
-                ),
                 vol.Required(
                     CONF_NOTIFY_ENABLED, default=DEFAULT_NOTIFY_ENABLED
                 ): BooleanSelector(),
@@ -274,8 +301,6 @@ class WeatherForecastConfigFlow(ConfigFlow, domain=DOMAIN):
 
     def _create(self) -> ConfigFlowResult:
         options = deepcopy(self._options)
-        options[CONF_NOTIFY] = self._data.get(CONF_NOTIFY)
-        options[CONF_ANNOUNCE] = self._data.get(CONF_ANNOUNCE)
         options[CONF_NOTIFY_ENABLED] = True
         return self.async_create_entry(
             title=self._data.get(CONF_NAME) or DEFAULT_NAME,
@@ -323,13 +348,11 @@ class WeatherForecastOptionsFlow(OptionsFlow):
                 return await self.async_step_global()
             if next_step == "cities":
                 return await self.async_step_cities()
-            if next_step == "module":
-                return await self.async_step_module()
         schema = vol.Schema(
             {
                 vol.Required("next", default="cities"): SelectSelector(
                     SelectSelectorConfig(
-                        options=["global", "cities", "module"],
+                        options=["global", "cities"],
                         mode=SelectSelectorMode.LIST,
                         translation_key="menu_next",
                     )
@@ -342,8 +365,7 @@ class WeatherForecastOptionsFlow(OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         if user_input is not None:
-            self._options[CONF_NOTIFY] = _notify_values(user_input.get(CONF_NOTIFY))
-            self._options[CONF_ANNOUNCE] = user_input.get(CONF_ANNOUNCE)
+            self._options[CONF_ENABLED] = user_input.get(CONF_ENABLED, True)
             new_data = {
                 **dict(self.config_entry.data),
                 CONF_NOTIFY_ENABLED: user_input.get(CONF_NOTIFY_ENABLED, True),
@@ -352,37 +374,15 @@ class WeatherForecastOptionsFlow(OptionsFlow):
                 self.config_entry, data=new_data
             )
             return self._save()
-        notify = _notify_values(self._options.get(CONF_NOTIFY))
-        notify_key = (
-            vol.Optional(CONF_NOTIFY, default=notify)
-            if notify
-            else vol.Optional(CONF_NOTIFY)
-        )
-        announce = self._options.get(CONF_ANNOUNCE)
-        announce_key = (
-            vol.Optional(CONF_ANNOUNCE, default=announce)
-            if announce
-            else vol.Optional(CONF_ANNOUNCE)
-        )
         global_enabled = self.config_entry.data.get(
             CONF_NOTIFY_ENABLED,
             self._options.get(CONF_NOTIFY_ENABLED, True),
         )
         schema = vol.Schema(
             {
-                notify_key: SelectSelector(
-                    SelectSelectorConfig(
-                        options=_notify_options(self.hass, notify),
-                        multiple=True,
-                        custom_value=True,
-                        mode=SelectSelectorMode.DROPDOWN,
-                    )
-                ),
-                announce_key: EntitySelector(
-                    EntitySelectorConfig(
-                        domain=["media_player", "tts", "text", "input_text"]
-                    )
-                ),
+                vol.Required(
+                    CONF_ENABLED, default=self._options.get(CONF_ENABLED, True)
+                ): BooleanSelector(),
                 vol.Required(
                     CONF_NOTIFY_ENABLED,
                     default=global_enabled,
@@ -390,47 +390,6 @@ class WeatherForecastOptionsFlow(OptionsFlow):
             }
         )
         return self.async_show_form(step_id="global", data_schema=schema)
-
-    async def async_step_module(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        cfg = self._options
-        if user_input is not None:
-            cfg[CONF_ENABLED] = user_input.get(CONF_ENABLED, True)
-            cfg[CONF_NOTIFY_ENABLED] = user_input.get(CONF_NOTIFY_ENABLED, False)
-            cfg[CONF_NOTIFY_START] = user_input.get(
-                CONF_NOTIFY_START, DEFAULT_NOTIFY_START
-            )
-            cfg[CONF_NOTIFY_END] = user_input.get(CONF_NOTIFY_END, DEFAULT_NOTIFY_END)
-            cfg[CONF_NOTIFY_ALARM] = user_input.get(CONF_NOTIFY_ALARM, True)
-            cfg[CONF_NOTIFY_RAIN] = user_input.get(CONF_NOTIFY_RAIN, True)
-            self._options = cfg
-            return self._save()
-        schema = vol.Schema(
-            {
-                vol.Required(
-                    CONF_ENABLED, default=cfg.get(CONF_ENABLED, True)
-                ): BooleanSelector(),
-                vol.Required(
-                    CONF_NOTIFY_ENABLED, default=cfg.get(CONF_NOTIFY_ENABLED, False)
-                ): BooleanSelector(),
-                vol.Required(
-                    CONF_NOTIFY_START,
-                    default=cfg.get(CONF_NOTIFY_START, DEFAULT_NOTIFY_START),
-                ): TimeSelector(),
-                vol.Required(
-                    CONF_NOTIFY_END,
-                    default=cfg.get(CONF_NOTIFY_END, DEFAULT_NOTIFY_END),
-                ): TimeSelector(),
-                vol.Required(
-                    CONF_NOTIFY_ALARM, default=cfg.get(CONF_NOTIFY_ALARM, True)
-                ): BooleanSelector(),
-                vol.Required(
-                    CONF_NOTIFY_RAIN, default=cfg.get(CONF_NOTIFY_RAIN, True)
-                ): BooleanSelector(),
-            }
-        )
-        return self.async_show_form(step_id="module", data_schema=schema)
 
     async def async_step_cities(
         self, user_input: dict[str, Any] | None = None
@@ -552,6 +511,19 @@ class WeatherForecastOptionsFlow(OptionsFlow):
                 user_input.get(CONF_FORECAST_DAYS) or DEFAULT_FORECAST_DAYS
             )
             indices_enabled = user_input.get(CONF_INDICES_ENABLED, True)
+            notify_on = bool(user_input.get(CONF_NOTIFY_ENABLED, False))
+            alarm_on = bool(user_input.get(CONF_NOTIFY_ALARM, True))
+            alarm_notify_in = _notify_values(user_input.get(CONF_NOTIFY_ALARM_NOTIFY))
+            alarm_announce_in = user_input.get(CONF_NOTIFY_ALARM_ANNOUNCE)
+            rain_on = bool(user_input.get(CONF_NOTIFY_RAIN, True))
+            rain_notify_in = _notify_values(user_input.get(CONF_NOTIFY_RAIN_NOTIFY))
+            rain_announce_in = user_input.get(CONF_NOTIFY_RAIN_ANNOUNCE)
+            if notify_on and alarm_on and not alarm_notify_in and not alarm_announce_in:
+                errors[CONF_NOTIFY_ALARM_NOTIFY] = "notify_or_announce"
+                errors[CONF_NOTIFY_ALARM_ANNOUNCE] = "notify_or_announce"
+            if notify_on and rain_on and not rain_notify_in and not rain_announce_in:
+                errors[CONF_NOTIFY_RAIN_NOTIFY] = "notify_or_announce"
+                errors[CONF_NOTIFY_RAIN_ANNOUNCE] = "notify_or_announce"
             if provider in (PROVIDER_QWEATHER, PROVIDER_CAIYUN) and not api_key:
                 errors["api_key"] = "api_key_required"
                 candidates: list[dict[str, str]] = []
@@ -615,6 +587,19 @@ class WeatherForecastOptionsFlow(OptionsFlow):
                         CONF_LOCATION: chosen_loc,
                         "lon": chosen.get("lon") or "",
                         "lat": chosen.get("lat") or "",
+                        CONF_NOTIFY_ENABLED: notify_on,
+                        CONF_NOTIFY_START: user_input.get(
+                            CONF_NOTIFY_START, DEFAULT_NOTIFY_START
+                        ),
+                        CONF_NOTIFY_END: user_input.get(
+                            CONF_NOTIFY_END, DEFAULT_NOTIFY_END
+                        ),
+                        CONF_NOTIFY_ALARM: alarm_on,
+                        CONF_NOTIFY_ALARM_NOTIFY: alarm_notify_in,
+                        CONF_NOTIFY_ALARM_ANNOUNCE: alarm_announce_in,
+                        CONF_NOTIFY_RAIN: rain_on,
+                        CONF_NOTIFY_RAIN_NOTIFY: rain_notify_in,
+                        CONF_NOTIFY_RAIN_ANNOUNCE: rain_announce_in,
                     },
                 )
                 skip = self._edit_index if editing else None
@@ -632,13 +617,18 @@ class WeatherForecastOptionsFlow(OptionsFlow):
                 self._draft = {}
                 return self._save()
 
+        def _shown(key: str, default: Any) -> Any:
+            if user_input is not None and key in user_input:
+                return user_input[key]
+            return base.get(key, default)
+
         schema = vol.Schema(
             {
                 vol.Required(
-                    "city", default=base.get(CONF_NAME) or "杭州"
+                    "city", default=_shown(CONF_NAME, "杭州") if user_input is None else _shown("city", "杭州")
                 ): TextSelector(),
                 vol.Required(
-                    CONF_PROVIDER, default=base.get(CONF_PROVIDER, PROVIDER_TIANQI)
+                    CONF_PROVIDER, default=_shown(CONF_PROVIDER, PROVIDER_TIANQI)
                 ): SelectSelector(
                     SelectSelectorConfig(
                         options=[PROVIDER_TIANQI, PROVIDER_QWEATHER, PROVIDER_CAIYUN],
@@ -648,26 +638,57 @@ class WeatherForecastOptionsFlow(OptionsFlow):
                 ),
                 vol.Required(
                     CONF_INTERVAL,
-                    default=base.get(CONF_INTERVAL, DEFAULT_WEATHER_INTERVAL),
+                    default=_shown(CONF_INTERVAL, DEFAULT_WEATHER_INTERVAL),
                 ): NumberSelector(
                     NumberSelectorConfig(min=1, max=180, mode=NumberSelectorMode.BOX)
                 ),
                 vol.Required(
                     CONF_FORECAST_DAYS,
-                    default=base.get(CONF_FORECAST_DAYS, DEFAULT_FORECAST_DAYS),
+                    default=_shown(CONF_FORECAST_DAYS, DEFAULT_FORECAST_DAYS),
                 ): NumberSelector(
                     NumberSelectorConfig(min=1, max=15, mode=NumberSelectorMode.BOX)
                 ),
                 vol.Required(
                     CONF_INDICES_ENABLED,
-                    default=base.get(CONF_INDICES_ENABLED, True),
+                    default=_shown(CONF_INDICES_ENABLED, True),
                 ): BooleanSelector(),
                 vol.Optional(
-                    CONF_API_KEY, default=base.get(CONF_API_KEY) or ""
+                    CONF_API_KEY, default=_shown(CONF_API_KEY, "") or ""
                 ): TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD)),
                 vol.Optional(
-                    CONF_API_HOST, default=base.get(CONF_API_HOST) or ""
+                    CONF_API_HOST, default=_shown(CONF_API_HOST, "") or ""
                 ): TextSelector(),
+                vol.Required(
+                    CONF_NOTIFY_ENABLED, default=_shown(CONF_NOTIFY_ENABLED, False)
+                ): BooleanSelector(),
+                vol.Required(
+                    CONF_NOTIFY_START,
+                    default=_shown(CONF_NOTIFY_START, DEFAULT_NOTIFY_START),
+                ): TimeSelector(),
+                vol.Required(
+                    CONF_NOTIFY_END,
+                    default=_shown(CONF_NOTIFY_END, DEFAULT_NOTIFY_END),
+                ): TimeSelector(),
+                vol.Required(
+                    CONF_NOTIFY_ALARM, default=_shown(CONF_NOTIFY_ALARM, True)
+                ): BooleanSelector(),
+                **_channel_fields(
+                    self.hass,
+                    CONF_NOTIFY_ALARM_NOTIFY,
+                    _shown(CONF_NOTIFY_ALARM_NOTIFY, []),
+                    CONF_NOTIFY_ALARM_ANNOUNCE,
+                    _shown(CONF_NOTIFY_ALARM_ANNOUNCE, None),
+                ),
+                vol.Required(
+                    CONF_NOTIFY_RAIN, default=_shown(CONF_NOTIFY_RAIN, True)
+                ): BooleanSelector(),
+                **_channel_fields(
+                    self.hass,
+                    CONF_NOTIFY_RAIN_NOTIFY,
+                    _shown(CONF_NOTIFY_RAIN_NOTIFY, []),
+                    CONF_NOTIFY_RAIN_ANNOUNCE,
+                    _shown(CONF_NOTIFY_RAIN_ANNOUNCE, None),
+                ),
             }
         )
         return self.async_show_form(

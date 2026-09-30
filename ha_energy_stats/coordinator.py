@@ -1115,16 +1115,18 @@ class EnergyStatsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         message = _nget(
             tr,
             "energy_message",
-            "高峰电量：{peak}kWh\n低谷电量：{valley}kWh\n总计电量：{energy}kWh\n应付电费：{cost}¥\n当前时间：{now}",
+            "高峰电量：{peak}kWh\n低谷电量：{valley}kWh\n总计电量：{energy}kWh\n应付电费：{cost}¥",
             peak=snap.get("peak", 0),
             valley=snap.get("valley", 0),
             energy=snap.get("energy", 0),
             cost=snap.get("cost", 0),
-            now=now.strftime("%Y-%m-%d %H:%M:%S"),
         )
         await self._send_notify(title, message)
 
     async def _send_notify(self, title: str, message: str) -> None:
+        message = str(message).replace("\\n", "\n").strip()
+        stamp = dt_util.now().strftime("%Y-%m-%d %H:%M:%S")
+        notify_message = f"{message}\n\n本通知 By 狂欢马克思\n通知时间: {stamp}"
         for item in _notify_items(self.cfg(CONF_NOTIFY)):
             action = None
             data: dict[str, Any] = {}
@@ -1138,7 +1140,7 @@ class EnergyStatsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if not action or "." not in action:
                 continue
             data["title"] = title
-            data["message"] = message
+            data["message"] = notify_message
             domain, service = action.split(".", 1)
             try:
                 if self.hass.services.has_service(domain, service):
@@ -1149,7 +1151,7 @@ class EnergyStatsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     await self.hass.services.async_call(
                         "notify",
                         "send_message",
-                        {"entity_id": action, "title": title, "message": message},
+                        {"entity_id": action, "title": title, "message": notify_message},
                         blocking=False,
                     )
             except Exception:

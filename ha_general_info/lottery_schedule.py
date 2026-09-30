@@ -48,7 +48,12 @@ def waiting_for_results(
     types: Iterable[str] | None,
     data: dict[str, Any] | None,
 ) -> bool:
-    if not any_draw_today(now, types) or not in_draw_window(now):
+    if not any_draw_today(now, types):
+        return False
+    start_h, start_m = LOTTERY_DRAW_WINDOW_START
+    start = now.replace(hour=start_h, minute=start_m, second=0, microsecond=0)
+    end = now.replace(hour=23, minute=59, second=0, microsecond=0)
+    if now < start or now > end:
         return False
     data = data or {}
     for t in _types(types):

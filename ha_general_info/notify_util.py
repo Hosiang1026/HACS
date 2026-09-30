@@ -49,6 +49,12 @@ def format_notify(*parts: str) -> str:
     return "\n".join(str(p or "") for p in parts).strip()
 
 
+def append_notify_footer(message: str) -> str:
+    stamp = dt_util.now().strftime("%Y-%m-%d %H:%M:%S")
+    base = str(message).replace("\\n", "\n").strip()
+    return f"{base}\n\n本通知 By 狂欢马克思\n通知时间: {stamp}"
+
+
 def format_carousel(*lines: str) -> str:
     out: list[str] = []
     for line in lines:
@@ -79,6 +85,7 @@ async def async_send_notify(
         return
 
     message = str(message).replace("\\n", "\n").strip()
+    notify_message = append_notify_footer(message)
     carousel_text = format_carousel(
         *(str(carousel or message).replace("\\n", "\n").splitlines())
     )
@@ -97,7 +104,7 @@ async def async_send_notify(
         if not action or "." not in action:
             continue
         data["title"] = title
-        data["message"] = message
+        data["message"] = notify_message
         domain, service = action.split(".", 1)
         try:
             if hass.services.has_service(domain, service):
@@ -109,7 +116,7 @@ async def async_send_notify(
                 await hass.services.async_call(
                     "notify",
                     "send_message",
-                    {"entity_id": action, "title": title, "message": message},
+                    {"entity_id": action, "title": title, "message": notify_message},
                     blocking=False,
                 )
                 sent = True
@@ -133,7 +140,7 @@ async def async_send_notify(
                 "send",
                 {
                     "title": title,
-                    "message": message,
+                    "message": notify_message,
                     "content": carousel_text,
                     "source": title,
                     "carousel": True,

@@ -312,10 +312,6 @@ def _apply_optional_clears(options: dict[str, Any], user_input: dict[str, Any]) 
     ):
         if key in user_input and not user_input.get(key):
             out.pop(key, None)
-    if CONF_NOTIFY in user_input and not _notify_values(user_input.get(CONF_NOTIFY)):
-        out.pop(CONF_NOTIFY, None)
-    if CONF_ANNOUNCE in user_input and not _announce_values(user_input.get(CONF_ANNOUNCE)):
-        out.pop(CONF_ANNOUNCE, None)
     return out
 
 
@@ -369,32 +365,120 @@ def _amap_car_options(cars: list[dict[str, Any]]) -> dict[str, str]:
     return options
 
 
+def _notify_kinds(include_12123: bool, include_amap: bool) -> list[tuple[str, bool]]:
+    kinds: list[tuple[str, bool]] = []
+    if include_12123:
+        kinds.append((CONF_NOTIFY_VIOLATION, DEFAULT_NOTIFY_VIOLATION))
+    kinds.extend(
+        [
+            (CONF_NOTIFY_YEARLY, DEFAULT_NOTIFY_YEARLY),
+            (CONF_NOTIFY_MAINT, DEFAULT_NOTIFY_MAINT),
+            (CONF_NOTIFY_INSURANCE, DEFAULT_NOTIFY_INSURANCE),
+            (CONF_NOTIFY_INSPECT, DEFAULT_NOTIFY_INSPECT),
+        ]
+    )
+    if include_12123:
+        kinds.append((CONF_NOTIFY_LICENSE, DEFAULT_NOTIFY_LICENSE))
+    if include_amap:
+        kinds.append((CONF_NOTIFY_LEAVE, False))
+        kinds.append((CONF_NOTIFY_ARRIVE, False))
+    return kinds
+
+
+def _optional_list(key: str, current: list[str]) -> Any:
+    if current:
+        return vol.Optional(key, default=current)
+    return vol.Optional(key)
+
+
+def _target_values(d: dict[str, Any], key: str, legacy_key: str, enabled: bool, parser) -> list[str]:
+    if key in d:
+        return parser(d.get(key))
+    if enabled:
+        return parser(d.get(legacy_key))
+    return []
+
+
+def _append_notify_targets(
+    fields: dict[Any, Any],
+    d: dict[str, Any],
+    hass: HomeAssistant | None,
+    kind: str,
+    enabled: bool,
+) -> None:
+    notify_key = f"{kind}_notify"
+    current_notify = _target_values(d, notify_key, CONF_NOTIFY, enabled, _notify_values)
+    fields[_optional_list(notify_key, current_notify)] = selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=_notify_options(hass, current_notify),
+            multiple=True,
+            custom_value=True,
+            mode=selector.SelectSelectorMode.DROPDOWN,
+        )
+    )
+    announce_key = f"{kind}_announce"
+    current_announce = _target_values(d, announce_key, CONF_ANNOUNCE, enabled, _announce_values)
+    fields[_optional_list(announce_key, current_announce)] = selector.EntitySelector(
+        selector.EntitySelectorConfig(domain=["media_player", "text", "input_text"], multiple=True)
+    )
+
+
 def _clean_notify(user_input: dict[str, Any], include_12123: bool = True, include_amap: bool = False) -> dict[str, Any]:
     data: dict[str, Any] = {
-        CONF_NOTIFY_YEARLY: bool(user_input.get(CONF_NOTIFY_YEARLY, DEFAULT_NOTIFY_YEARLY)),
-        CONF_NOTIFY_MAINT: bool(user_input.get(CONF_NOTIFY_MAINT, DEFAULT_NOTIFY_MAINT)),
-        CONF_NOTIFY_INSURANCE: bool(user_input.get(CONF_NOTIFY_INSURANCE, DEFAULT_NOTIFY_INSURANCE)),
-        CONF_NOTIFY_INSPECT: bool(user_input.get(CONF_NOTIFY_INSPECT, DEFAULT_NOTIFY_INSPECT)),
         CONF_EXPIRE_DAYS: int(user_input.get(CONF_EXPIRE_DAYS, DEFAULT_EXPIRE_DAYS)),
     }
-    if include_12123:
-        data[CONF_NOTIFY_VIOLATION] = bool(user_input.get(CONF_NOTIFY_VIOLATION, DEFAULT_NOTIFY_VIOLATION))
-        data[CONF_NOTIFY_LICENSE] = bool(user_input.get(CONF_NOTIFY_LICENSE, DEFAULT_NOTIFY_LICENSE))
-    else:
+    for kind, default in _notify_kinds(include_12123, include_amap):
+        data[kind] = bool(user_input.get(kind, default))
+        notify = _notify_values(user_input.get(f"{kind}_notify"))
+        if notify:
+            data[f"{kind}_notify"] = notify
+        announce = _announce_values(user_input.get(f"{kind}_announce"))
+        if announce:
+            data[f"{kind}_announce"] = announce
+    if not include_12123:
         data[CONF_NOTIFY_VIOLATION] = False
         data[CONF_NOTIFY_LICENSE] = False
-    if include_amap:
-        data[CONF_NOTIFY_LEAVE] = bool(user_input.get(CONF_NOTIFY_LEAVE, False))
-        data[CONF_NOTIFY_ARRIVE] = bool(user_input.get(CONF_NOTIFY_ARRIVE, False))
-    if CONF_NOTIFY in user_input:
-        notify = _notify_values(user_input.get(CONF_NOTIFY))
-        if notify:
-            data[CONF_NOTIFY] = notify
-    if CONF_ANNOUNCE in user_input:
-        announce = _announce_values(user_input.get(CONF_ANNOUNCE))
-        if announce:
-            data[CONF_ANNOUNCE] = announce
     return data
+
+
+def _notify_target_errors(
+    user_input: dict[str, Any],
+    include_12123: bool,
+    include_amap: bool,
+) -> dict[str, str]:
+    errors: dict[str, str] = {}
+    for kind, default in _notify_kinds(include_12123, include_amap):
+        if not bool(user_input.get(kind, default)):
+            continue
+        if _notify_values(user_input.get(f"{kind}_notify")) or _announce_values(user_input.get(f"{kind}_announce")):
+            continue
+        errors[f"{kind}_notify"] = "notify_target_required"
+    return errors
+
+
+def _drop_cleared_notify_targets(
+    options: dict[str, Any],
+    user_input: dict[str, Any],
+    include_12123: bool,
+    include_amap: bool,
+) -> dict[str, Any]:
+    legacy_notify = _notify_values(options.get(CONF_NOTIFY))
+    legacy_announce = _announce_values(options.get(CONF_ANNOUNCE))
+    for kind, default in _notify_kinds(include_12123, include_amap):
+        enabled = bool(user_input.get(kind, default))
+        notify_key = f"{kind}_notify"
+        announce_key = f"{kind}_announce"
+        if notify_key in user_input and not _notify_values(user_input.get(notify_key)):
+            options.pop(notify_key, None)
+        elif enabled and notify_key not in options and notify_key not in user_input and legacy_notify:
+            options[notify_key] = legacy_notify
+        if announce_key in user_input and not _announce_values(user_input.get(announce_key)):
+            options.pop(announce_key, None)
+        elif enabled and announce_key not in options and announce_key not in user_input and legacy_announce:
+            options[announce_key] = legacy_announce
+    options.pop(CONF_NOTIFY, None)
+    options.pop(CONF_ANNOUNCE, None)
+    return options
 
 
 def _notify_schema(
@@ -412,42 +496,12 @@ def _notify_schema(
         return legacy or default
 
     fields: dict[Any, Any] = {}
-    if include_12123:
-        fields[vol.Required(CONF_NOTIFY_VIOLATION, default=_flag(CONF_NOTIFY_VIOLATION, DEFAULT_NOTIFY_VIOLATION))] = selector.BooleanSelector()
-    fields[vol.Required(CONF_NOTIFY_YEARLY, default=_flag(CONF_NOTIFY_YEARLY, DEFAULT_NOTIFY_YEARLY))] = selector.BooleanSelector()
-    fields[vol.Required(CONF_NOTIFY_MAINT, default=_flag(CONF_NOTIFY_MAINT, DEFAULT_NOTIFY_MAINT))] = selector.BooleanSelector()
-    fields[vol.Required(CONF_NOTIFY_INSURANCE, default=_flag(CONF_NOTIFY_INSURANCE, DEFAULT_NOTIFY_INSURANCE))] = selector.BooleanSelector()
-    fields[vol.Required(CONF_NOTIFY_INSPECT, default=_flag(CONF_NOTIFY_INSPECT, DEFAULT_NOTIFY_INSPECT))] = selector.BooleanSelector()
-    if include_12123:
-        fields[vol.Required(CONF_NOTIFY_LICENSE, default=_flag(CONF_NOTIFY_LICENSE, DEFAULT_NOTIFY_LICENSE))] = selector.BooleanSelector()
-    if include_amap:
-        fields[vol.Required(CONF_NOTIFY_LEAVE, default=bool(d.get(CONF_NOTIFY_LEAVE, False)))] = selector.BooleanSelector()
-        fields[vol.Required(CONF_NOTIFY_ARRIVE, default=bool(d.get(CONF_NOTIFY_ARRIVE, False)))] = selector.BooleanSelector()
+    for kind, default in _notify_kinds(include_12123, include_amap):
+        enabled = _flag(kind, default)
+        fields[vol.Required(kind, default=enabled)] = selector.BooleanSelector()
+        _append_notify_targets(fields, d, hass, kind, enabled)
     fields[vol.Required(CONF_EXPIRE_DAYS, default=d.get(CONF_EXPIRE_DAYS, DEFAULT_EXPIRE_DAYS))] = selector.NumberSelector(
         selector.NumberSelectorConfig(min=1, max=180, step=1, unit_of_measurement=UNIT_DAY, mode=selector.NumberSelectorMode.BOX)
-    )
-    current_notify = _notify_values(d.get(CONF_NOTIFY))
-    notify_key = (
-        vol.Optional(CONF_NOTIFY, default=current_notify)
-        if current_notify
-        else vol.Optional(CONF_NOTIFY)
-    )
-    fields[notify_key] = selector.SelectSelector(
-        selector.SelectSelectorConfig(
-            options=_notify_options(hass, current_notify),
-            multiple=True,
-            custom_value=True,
-            mode=selector.SelectSelectorMode.DROPDOWN,
-        )
-    )
-    current_announce = _announce_values(d.get(CONF_ANNOUNCE))
-    announce_key = (
-        vol.Optional(CONF_ANNOUNCE, default=current_announce)
-        if current_announce
-        else vol.Optional(CONF_ANNOUNCE)
-    )
-    fields[announce_key] = selector.EntitySelector(
-        selector.EntitySelectorConfig(domain=["media_player", "text", "input_text"], multiple=True)
     )
     return vol.Schema(fields)
 
@@ -907,12 +961,20 @@ class CarStatsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_notify(self, user_input: dict[str, Any] | None = None):
         include_12123 = self._enable_12123
         include_amap = self._enable_amap
+        errors: dict[str, str] = {}
         if user_input is not None:
-            options = {
-                **self._stats_options,
-                **self._amap_options,
-                **_clean_notify(user_input, include_12123=include_12123, include_amap=include_amap),
-            }
+            errors = _notify_target_errors(user_input, include_12123, include_amap)
+        if user_input is not None and not errors:
+            options = _drop_cleared_notify_targets(
+                {
+                    **self._stats_options,
+                    **self._amap_options,
+                    **_clean_notify(user_input, include_12123=include_12123, include_amap=include_amap),
+                },
+                user_input,
+                include_12123,
+                include_amap,
+            )
             data: dict[str, Any] = {CONF_VEHICLE_INDEX: self._vehicle_index}
             if include_12123:
                 plate_slug = slugify(self._default_name) or "car"
@@ -953,7 +1015,8 @@ class CarStatsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
         return self.async_show_form(
             step_id="notify",
-            data_schema=_notify_schema({}, self.hass, include_12123=include_12123, include_amap=include_amap),
+            data_schema=_notify_schema(user_input or {}, self.hass, include_12123=include_12123, include_amap=include_amap),
+            errors=errors,
         )
 
     async def async_step_reauth(self, entry_data: dict[str, Any]):
@@ -1067,17 +1130,27 @@ class CarStatsOptionsFlow(config_entries.OptionsFlow):
             and entry.data.get(CONF_AMAP_KEY)
             and entry.data.get(CONF_AMAP_PARAMDATA)
         )
-        if user_input is not None:
-            options = _finalize_options(
-                entry,
-                _clean_notify(user_input, include_12123=has_12123, include_amap=has_amap),
-                user_input,
-            )
-            return self.async_create_entry(title="", data=options)
+        errors: dict[str, str] = {}
         current = {**entry.data, **entry.options}
+        if user_input is not None:
+            errors = _notify_target_errors(user_input, has_12123, has_amap)
+            if not errors:
+                options = _drop_cleared_notify_targets(
+                    _finalize_options(
+                        entry,
+                        _clean_notify(user_input, include_12123=has_12123, include_amap=has_amap),
+                        user_input,
+                    ),
+                    user_input,
+                    has_12123,
+                    has_amap,
+                )
+                return self.async_create_entry(title="", data=options)
+            current = {**current, **user_input}
         return self.async_show_form(
             step_id="notify",
             data_schema=_notify_schema(current, self.hass, include_12123=has_12123, include_amap=has_amap),
+            errors=errors,
         )
 
     async def async_step_opt_12123(self, user_input: dict[str, Any] | None = None):

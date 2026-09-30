@@ -309,6 +309,9 @@ class FuelPriceCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_send_notify(
         self, title: str, message: str, actions: Any = None
     ) -> None:
+        message = str(message).replace("\\n", "\n").strip()
+        stamp = dt_util.now().strftime("%Y-%m-%d %H:%M:%S")
+        notify_message = f"{message}\n\n本通知 By 狂欢马克思\n通知时间: {stamp}"
         notify_list = (
             _notify_values(actions)
             if actions is not None
@@ -323,7 +326,7 @@ class FuelPriceCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     await self.hass.services.async_call(
                         domain,
                         service,
-                        {"title": title, "message": message},
+                        {"title": title, "message": notify_message},
                         blocking=False,
                     )
                 elif domain == "notify" and self.hass.states.get(action):
@@ -333,7 +336,7 @@ class FuelPriceCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         {
                             "entity_id": action,
                             "title": title,
-                            "message": message,
+                            "message": notify_message,
                         },
                         blocking=False,
                     )
@@ -357,7 +360,7 @@ class FuelPriceCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     "send",
                     {
                         "title": title,
-                        "message": message,
+                        "message": notify_message,
                         "content": message,
                         "source": title,
                         "carousel": True,

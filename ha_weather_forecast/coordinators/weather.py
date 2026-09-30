@@ -24,7 +24,11 @@ from ..const import (
     CONF_LOCATION,
     CONF_NAME,
     CONF_NOTIFY_ALARM,
+    CONF_NOTIFY_ALARM_ANNOUNCE,
+    CONF_NOTIFY_ALARM_NOTIFY,
     CONF_NOTIFY_RAIN,
+    CONF_NOTIFY_RAIN_ANNOUNCE,
+    CONF_NOTIFY_RAIN_NOTIFY,
     CONF_PROVIDER,
     CONF_SLUG,
     DEFAULT_FORECAST_DAYS,
@@ -35,7 +39,7 @@ from ..const import (
     PROVIDER_QWEATHER,
     PROVIDER_TIANQI,
 )
-from ..notify_util import async_send_notify
+from ..notify_util import async_send_notify, channel_targets
 from ..weather_schedule import calc_weather_interval_minutes
 from .update_stamp import mark_updated
 
@@ -219,9 +223,16 @@ def _rain_section(data: dict[str, Any], payload: dict[str, Any]) -> str:
     return "🌧降雨信息\n\n" + "\n".join(lines)
 
 
+def _rain_rank(sig: str) -> int:
+    rank = {"L": 1, "M": 2, "H": 3}
+    best = 0
+    for part in str(sig).split("|"):
+        best = max(best, rank.get(part.rsplit(":", 1)[-1], 0))
+    return best
+
+
 def _notify_body(*sections: str) -> str:
     parts = [s.strip() for s in sections if s and str(s).strip()]
-    parts.append(f"通知时间: {dt_util.now().strftime('%Y-%m-%d %H:%M:%S')}")
     return "\n\n".join(parts)
 
 
@@ -231,12 +242,10 @@ class WeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         hass: HomeAssistant,
         entry: ConfigEntry,
         instance: dict[str, Any],
-        module_cfg: dict[str, Any],
         entry_opts: dict[str, Any],
     ) -> None:
         self.entry = entry
         self.instance = instance
-        self.module_cfg = module_cfg
         self.entry_opts = entry_opts
         self.city_name = instance.get(CONF_NAME) or "天气"
         self.slug = resolve_slug(
@@ -249,6 +258,8 @@ class WeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.device_name = f"天气预报 · {self.city_name}"
         self._last_alarm_sig: str | None = None
         self._last_rain_sig: str | None = None
+        self._last_rain_rank = 0
+        self._last_rain_at = None
         self.last_update_at = None
         minutes = calc_weather_interval_minutes(
             peak_minutes=int(instance.get(CONF_INTERVAL) or DEFAULT_WEATHER_INTERVAL),
@@ -308,7 +319,7 @@ class WeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return data
 
     async def _maybe_notify(self, data: dict[str, Any]) -> None:
-        if not self.module_cfg.get(CONF_NOTIFY_ALARM, True):
+        if not self.instance.get(CONF_NOTIFY_ALARM, True):
             return
         alarms = data.get("alarms") or []
         sig = "|".join(
@@ -329,23 +340,45 @@ class WeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         await async_send_notify(
             self.hass,
             self.entry_opts,
-            self.module_cfg,
+            self.instance,
             f"{self.city_name}天气预警",
             text,
             carousel=text,
+            channel=channel_targets(
+                self.instance,
+                self.entry_opts,
+                CONF_NOTIFY_ALARM_NOTIFY,
+                CONF_NOTIFY_ALARM_ANNOUNCE,
+            ),
         )
 
     async def _maybe_notify_rain(self, data: dict[str, Any]) -> None:
-        if not self.module_cfg.get(CONF_NOTIFY_RAIN, True):
+        if not self.instance.get(CONF_NOTIFY_RAIN, True):
             return
         payload = build_rain_payload(data)
+        now = dt_util.now()
         if not payload:
-            self._last_rain_sig = None
+            if (
+                self._last_rain_at is not None
+                and now - self._last_rain_at >= timedelta(hours=3)
+            ):
+                self._last_rain_sig = None
+                self._last_rain_rank = 0
             return
         sig = payload.get("sig") or ""
         if not sig or sig == self._last_rain_sig:
             return
+        rank = _rain_rank(sig)
+        if (
+            self._last_rain_at is not None
+            and now - self._last_rain_at < timedelta(hours=3)
+            and rank <= self._last_rain_rank
+        ):
+            self._last_rain_sig = sig
+            return
         self._last_rain_sig = sig
+        self._last_rain_rank = rank
+        self._last_rain_at = now
         text = _notify_body(
             _live_weather(self.city_name, data),
             _rain_section(data, payload),
@@ -353,8 +386,14 @@ class WeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         await async_send_notify(
             self.hass,
             self.entry_opts,
-            self.module_cfg,
+            self.instance,
             f"{self.city_name}降雨提醒",
             text,
             carousel=text,
+            channel=channel_targets(
+                self.instance,
+                self.entry_opts,
+                CONF_NOTIFY_RAIN_NOTIFY,
+                CONF_NOTIFY_RAIN_ANNOUNCE,
+            ),
         )

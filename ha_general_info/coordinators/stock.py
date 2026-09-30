@@ -8,7 +8,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
 
 from ..apis.stock import fetch_stock_sina, fetch_stock_tencent
 from ..const import (
@@ -30,10 +29,6 @@ from ..stock_schedule import calc_stock_interval_minutes, in_watch_session
 from .update_stamp import mark_updated
 
 _LOGGER = logging.getLogger(__name__)
-
-
-def _now_text() -> str:
-    return dt_util.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 class StockCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -157,6 +152,5 @@ class StockCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     f"股票名称: {name}",
                     f"现价: {item.get('price')}" if item.get("price") is not None else "",
                     f"涨跌幅: {pct_f:+g}%",
-                    f"当前时间: {dt or _now_text()}",
                 ),
             )

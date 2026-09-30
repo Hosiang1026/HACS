@@ -8,7 +8,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.util import dt as dt_util
 
 from ..apis.media_hot import fetch_movie_hot, fetch_music_hot, fetch_tv_hot
 from ..const import (
@@ -35,10 +34,6 @@ _NOTIFY_TITLE = {
     "tv": "📺剧集热榜",
     "music": "🎵音乐热榜",
 }
-
-
-def _now_text() -> str:
-    return dt_util.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _media_items(module_cfg: dict[str, Any]) -> list[str]:
@@ -143,6 +138,5 @@ class MediaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     f"榜单: {title}",
                     f"榜首: {top}",
                     f"第2名: {rank2}" if rank2 else "",
-                    f"当前时间: {_now_text()}",
                 ),
             )

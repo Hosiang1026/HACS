@@ -125,7 +125,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         for inst in opts.get(CONF_INSTANCES) or []:
             if not inst.get("location"):
                 continue
-            coord = WeatherCoordinator(hass, entry, inst, opts, entry_opts)
+            coord = WeatherCoordinator(hass, entry, inst, entry_opts)
             try:
                 await coord.async_config_entry_first_refresh()
             except Exception:  # noqa: BLE001

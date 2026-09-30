@@ -136,6 +136,6 @@
     "daily_title": "今日电费通知",
     "monthly_title": "本月电费通知",
     "yearly_title": "本年电费通知",
-    "energy_message": "高峰电量：{peak}kWh\n低谷电量：{valley}kWh\n总计电量：{energy}kWh\n应付电费：{cost}¥\n当前时间：{now}"
+    "energy_message": "高峰电量：{peak}kWh\n低谷电量：{valley}kWh\n总计电量：{energy}kWh\n应付电费：{cost}¥"
   }
 }

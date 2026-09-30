@@ -19,6 +19,21 @@ from .helpers import fmt_duration
 _LOGGER = logging.getLogger(__name__)
 
 
+class AmapSessionExpired(Exception):
+    pass
+
+
+def _session_expired(resp: dict[str, Any]) -> bool:
+    code = str(resp.get("code") if resp.get("code") is not None else "")
+    message = str(resp.get("message") or resp.get("msg") or "")
+    low = message.lower()
+    if code == "14" or "not login" in low:
+        return True
+    if any(k in message for k in ("未登录", "登录失效", "登录已过期", "会话失效", "会话过期")):
+        return True
+    return "session" in low and any(k in low for k in ("invalid", "expire", "expired"))
+
+
 class DateTimeEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, datetime.datetime):
@@ -88,6 +103,8 @@ class AmapDataFetcher:
         resp = self.session.post(AMAP_API_HOST + self.amap_key, data=self.amap_paramdata, timeout=15).json()
         if not isinstance(resp, dict):
             return []
+        if _session_expired(resp):
+            raise AmapSessionExpired(str(resp.get("message") or resp.get("code") or "session expired"))
         lst = (resp.get("data") or {}).get("carLinkInfoList") or []
         return lst if isinstance(lst, list) else []
 
@@ -167,6 +184,8 @@ class AmapDataFetcher:
         try:
             async with asyncio.timeout(20):
                 devices = await self.hass.async_add_executor_job(self._get_devices_info) or []
+        except AmapSessionExpired:
+            raise
         except Exception as err:
             _LOGGER.error("amap fetch failed: %s", err)
             raise

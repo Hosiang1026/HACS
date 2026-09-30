@@ -13,6 +13,7 @@ import urllib.parse
 from typing import Any
 
 import requests
+from homeassistant.components.persistent_notification import async_create, async_dismiss
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.event import async_track_state_change_event, async_track_time_change
@@ -20,7 +21,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 from homeassistant.util.location import distance
 
-from .amap_fetcher import AmapDataFetcher
+from .amap_fetcher import AmapDataFetcher, AmapSessionExpired
 from .const import (
     CONF_ADDRESS_DISTANCE,
     CONF_ADDRESSAPI_KEY,
@@ -90,9 +91,12 @@ class AmapGpsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._navi_dest_boost = False
         self._notify_prev: dict[str, Any] | None = None
         self._owner_boost = False
+        self._confirm_offline = False
+        self._session_expired_notified = False
+        self._session_notice_cleared = False
         self._owner_in_exclude: bool | None = None
         self._unsub_owners = None
-        self._owner_radius = 100
+        self._owner_radius = 300
         entry.async_on_unload(self._cleanup_owners)
         entry.async_on_unload(self.async_shutdown)
         entry.async_on_unload(
@@ -128,9 +132,10 @@ class AmapGpsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._owner_in_exclude = now_in_ex
         boost = self._owner_should_boost()
         if boost != was_boost:
+            if was_boost and not boost:
+                self._confirm_offline = True
             self._apply_poll_interval()
-            if boost:
-                await self.async_request_refresh()
+            await self.async_request_refresh()
             return
         if was_in_ex is True and not now_in_ex and self._is_offline():
             await self.async_request_refresh()
@@ -142,6 +147,14 @@ class AmapGpsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._ensure_api_calls_day()
         try:
             raw = await self._fetcher.get_data()
+        except AmapSessionExpired:
+            self._notify_session_expired()
+            self.update_interval = None
+            kept = self._keep_or_fallback()
+            if kept:
+                await self._persist_extras(kept)
+                return kept
+            raise UpdateFailed("高德车机会话过期") from None
         except Exception as err:
             kept = self._keep_or_fallback()
             if kept:
@@ -169,11 +182,35 @@ class AmapGpsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         await self._maybe_record_navi_toll(item)
         await self._check_and_notify(item)
         self._update_navi_dest_boost(item)
-        self._apply_poll_interval(item)
         self._attach_api_calls(item)
         await self._persist_extras(item)
         self._ensure_login_at()
+        self._clear_session_notice()
+        self._apply_poll_interval(item)
         return item
+
+    def _session_notice_id(self) -> str:
+        return f"{DOMAIN}_amap_session_{self.entry.entry_id}"
+
+    def _notify_session_expired(self) -> None:
+        if self._session_expired_notified:
+            return
+        self._session_expired_notified = True
+        name = self.entry.title or "车辆"
+        _LOGGER.warning("amap session expired: %s", name)
+        async_create(
+            self.hass,
+            f"{name} 的高德车机会话已过期，定位已停止更新。请到该车辆选项「高德凭证」重新填写 sessionid。",
+            title="高德车机会话过期",
+            notification_id=self._session_notice_id(),
+        )
+
+    def _clear_session_notice(self) -> None:
+        if self._session_notice_cleared and not self._session_expired_notified:
+            return
+        self._session_expired_notified = False
+        self._session_notice_cleared = True
+        async_dismiss(self.hass, self._session_notice_id())
 
     def _ensure_login_at(self) -> None:
         if self.entry.data.get(CONF_AMAP_LOGIN_AT):
@@ -424,16 +461,24 @@ class AmapGpsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         attrs = data.get("attrs") or {}
         online = attrs.get("onlinestatus") == "在线"
         navigating = attrs.get("naviStatus") == "导航中"
-        driving = online and (self._is_running(attrs.get("runorstop")) or navigating)
         owner_boost = self._owner_should_boost()
         self._owner_boost = owner_boost
+        if self._session_expired_notified:
+            self.update_interval = None
+            return
         active_max = cfg_poll_active(self.entry)
-        if navigating and self._navi_dest_boost:
+        running = self._is_running(attrs.get("runorstop"))
+        driving = navigating or (online and running)
+        if owner_boost and not driving:
+            self._confirm_offline = False
             self.update_interval = datetime.timedelta(minutes=5)
-        elif driving or owner_boost or online:
+        elif driving or (self._confirm_offline and online):
+            self.update_interval = datetime.timedelta(minutes=5)
+        elif online:
             self.update_interval = datetime.timedelta(seconds=random.randint(1, active_max) * 60)
         else:
-            self.update_interval = None
+            self._confirm_offline = False
+            self.update_interval = datetime.timedelta(seconds=random.randint(1, 120) * 60)
 
     def _fmt_duration(self, seconds: int) -> str:
         return fmt_duration(seconds)
@@ -502,20 +547,21 @@ class AmapGpsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if not events or old is None:
             return
         addr = new_state["address"]
-        nowstr = new_state["querytime"] or datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         if "leave" in events and old.get("in_home") is True and new_state.get("in_home") is False:
             await send_notify(
                 self.hass,
                 self.entry,
                 "汽车离家通知",
-                f"停车时长：{new_state.get('parkingtime')}\n当前位置：{addr}\n当前时间：{nowstr}",
+                f"停车时长：{new_state.get('parkingtime')}\n当前位置：{addr}",
+                CONF_NOTIFY_LEAVE,
             )
         if "arrive" in events and old.get("in_home") is False and new_state.get("in_home") is True:
             await send_notify(
                 self.hass,
                 self.entry,
                 "汽车到家通知",
-                f"开车时长：{new_state.get('drivetime')}\n当前位置：{addr}\n当前时间：{nowstr}",
+                f"开车时长：{new_state.get('drivetime')}\n当前位置：{addr}",
+                CONF_NOTIFY_ARRIVE,
             )
 
     async def _maybe_update_address(self, item: dict[str, Any]) -> None:
@@ -730,6 +776,7 @@ class AmapGpsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return s * earth_radius * 1000
 
     async def async_shutdown(self) -> None:
+        self._clear_session_notice()
         try:
             self._fetcher.session.close()
         except Exception:

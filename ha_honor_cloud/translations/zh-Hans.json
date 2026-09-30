@@ -1,0 +1,174 @@
+{
+  "title": "荣耀云服务",
+  "config": {
+    "step": {
+      "user": {
+        "title": "荣耀云服务配置",
+        "description": "请配置 Playwright 后端与荣耀账号",
+        "data": {
+          "service_base_url": "Playwright 服务地址",
+          "username": "荣耀账号",
+          "password": "荣耀密码"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "无法连接 Playwright 服务，请检查地址与网络",
+      "invalid_auth": "认证失败，请检查账号和密码",
+      "base_url_required": "Playwright 服务地址不能为空",
+      "invalid_url": "地址格式不正确，必须以 http:// 或 https:// 开头",
+      "username_required": "荣耀账号不能为空",
+      "password_required": "荣耀密码不能为空",
+      "unknown": "未知错误"
+    },
+    "abort": {
+      "already_configured": "此荣耀云服务已配置"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "荣耀云服务选项",
+        "menu_options": {
+          "locate": "定位设置",
+          "amap": "高德设置",
+          "account": "账号与后端"
+        }
+      },
+      "locate": {
+        "title": "定位设置",
+        "data": {
+          "interval": "位置更新间隔（分钟）",
+          "use_page_location": "启用主动定位"
+        }
+      },
+      "amap": {
+        "title": "高德设置",
+        "data": {
+          "amap_api_key": "高德 Key",
+          "amap_daily_limit": "每日调用上限（免费额度建议 ≤4500）",
+          "enable_amap": "启用高德调用",
+          "commute_enabled": "是否启用通勤",
+          "commute_zones": "家区域",
+          "activity_entity": "活动状态"
+        },
+        "data_description": {
+          "activity_entity": "可多选，每人对应一个；值：在家、公司、外出、外地"
+        }
+      },
+      "account": {
+        "title": "账号与后端",
+        "data": {
+          "service_base_url": "Playwright 服务地址",
+          "username": "荣耀账号",
+          "password": "荣耀密码",
+          "api_key": "后端 API Key"
+        }
+      }
+    },
+    "error": {
+      "amap_required": "启用通勤需先开启高德调用",
+      "commute_key": "请填写高德 Key",
+      "commute_zones": "请选择至少一个家区域"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "created_at": { "name": "创建时间" },
+      "locate_count": { "name": "每日定位调用次数" },
+      "amap_count": { "name": "每日高德调用次数" },
+      "status": {
+        "name": "服务状态",
+        "state": {
+          "initializing": "初始化中",
+          "waiting_login": "等待登录",
+          "logging_in": "登录中",
+          "need_auth": "需要认证",
+          "auth_expired": "认证过期",
+          "ok": "正常",
+          "error": "异常"
+        }
+      },
+      "battery": { "name": "电量" },
+      "phone_status": {
+        "name": "手机状态",
+        "state": {
+          "online": "在线",
+          "offline": "离线",
+          "unknown": "未知"
+        }
+      },
+      "update_time": { "name": "更新时间" },
+      "address": { "name": "地址" },
+      "commute_distance": { "name": "通勤距离" },
+      "commute_time": { "name": "通勤时间" },
+      "commute_info": { "name": "通勤信息" }
+    },
+    "button": {
+      "update": { "name": "更新" },
+      "ring": { "name": "响铃" },
+      "lost_device": { "name": "丢失模式" }
+    },
+    "text": {
+      "lost_password": { "name": "锁屏密码" },
+      "lost_message": { "name": "丢失留言" },
+      "lost_number": { "name": "联系电话" }
+    }
+  },
+  "services": {
+    "force_sync": {
+      "name": "强制同步",
+      "description": "立即同步设备位置，忽略轮询间隔。",
+      "fields": {
+        "mode": {
+          "name": "同步模式",
+          "description": "normal：缓存定位；active：实时定位（60 秒限频）。"
+        }
+      }
+    },
+    "force_locate": {
+      "name": "主动定位",
+      "description": "对全部设备执行主动定位并刷新实体。"
+    },
+    "ring": {
+      "name": "响铃",
+      "description": "触发设备响铃（找手机）。",
+      "fields": {
+        "device_id": {
+          "name": "设备 ID",
+          "description": "设备追踪器属性中的 device_id。"
+        },
+        "action": {
+          "name": "动作",
+          "description": "start 开始响铃；stop 暂不支持。"
+        }
+      }
+    },
+    "lost": {
+      "name": "丢失模式",
+      "description": "开启或关闭丢失模式。",
+      "fields": {
+        "device_id": {
+          "name": "设备 ID",
+          "description": "荣耀云设备 ID。"
+        },
+        "action": {
+          "name": "动作",
+          "description": "start 或 stop。"
+        },
+        "password": {
+          "name": "锁屏密码",
+          "description": "4–16 位数字；留空则使用文本实体中的值。"
+        },
+        "message": {
+          "name": "丢失留言",
+          "description": "锁屏留言；留空则使用文本实体中的值。"
+        },
+        "phone": {
+          "name": "联系电话",
+          "description": "联系电话；留空则使用文本实体中的值。"
+        }
+      }
+    }
+  }
+}

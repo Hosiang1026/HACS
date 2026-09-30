@@ -27,7 +27,6 @@ from homeassistant.helpers.selector import (
     TimeSelector,
 )
 
-from .announce import async_announce
 from .localize import tr
 from .const import (
     CONF_ACTIVITY_SENSOR,
@@ -63,9 +62,17 @@ from .const import (
     CONF_MONTHLY_RESET_DAY,
     CONF_NOTIFY,
     CONF_NOTIFY_ARRIVE,
+    CONF_NOTIFY_ARRIVE_ANNOUNCE,
+    CONF_NOTIFY_ARRIVE_NOTIFY,
     CONF_NOTIFY_LEAVE,
+    CONF_NOTIFY_LEAVE_ANNOUNCE,
+    CONF_NOTIFY_LEAVE_NOTIFY,
     CONF_NOTIFY_STATION_ENTER,
+    CONF_NOTIFY_STATION_ENTER_ANNOUNCE,
+    CONF_NOTIFY_STATION_ENTER_NOTIFY,
     CONF_NOTIFY_STATION_LEAVE,
+    CONF_NOTIFY_STATION_LEAVE_ANNOUNCE,
+    CONF_NOTIFY_STATION_LEAVE_NOTIFY,
     CONF_OVER_WAGE,
     CONF_OVERTIME_START,
     CONF_PEOPLE,
@@ -78,6 +85,8 @@ from .const import (
     CONF_TOTAL_PEOPLE,
     CONF_WORK_ENABLED,
     CONF_WORK_NOTIFY,
+    CONF_WORK_NOTIFY_ANNOUNCE,
+    CONF_WORK_NOTIFY_NOTIFY,
     CONF_WORK_ZONES,
     DEFAULT_AREA_LAT_MAX,
     DEFAULT_AREA_LAT_MIN,
@@ -132,30 +141,6 @@ def _field_list(schema: vol.Schema) -> Any:
             schema, custom_serializer=cv.custom_serializer
         )
     return to_field_list(schema, custom_serializer=cv.custom_serializer)
-
-
-class _AnnounceTest(Selector):
-    selector_type = "select"
-    CONFIG_SCHEMA = vol.Schema({}, extra=vol.ALLOW_EXTRA)
-
-    def __init__(self, label: str) -> None:
-        self.config: dict[str, Any] = {}
-        self._label = label
-
-    def __call__(self, data: Any) -> Any:
-        if data in (None, "", "test"):
-            return data
-        raise vol.Invalid("invalid")
-
-    def serialize(self) -> dict[str, Any]:
-        return {
-            "selector": {
-                "select": {
-                    "options": [{"value": "test", "label": self._label}],
-                    "mode": "box",
-                }
-            }
-        }
 
 
 class _FormGrid(Selector):
@@ -224,6 +209,106 @@ def _notify_options(hass: HomeAssistant | None, current: Any = None) -> list[str
                 names.add(f"notify.{name}")
         names.update(hass.states.async_entity_ids("notify"))
     return sorted(names)
+
+
+def _announce_values(raw: Any) -> list[str]:
+    if not raw:
+        return []
+    if isinstance(raw, str):
+        return [raw]
+    return [item for item in raw if item]
+
+
+def _stored_or_legacy(src: dict[str, Any], key: str, legacy: str) -> Any:
+    if key in src and src[key] not in (None, ""):
+        return src[key]
+    return src.get(legacy)
+
+
+def _notify_selector(hass: HomeAssistant | None, current: Any) -> SelectSelector:
+    return SelectSelector(
+        SelectSelectorConfig(
+            options=_notify_options(hass, current),
+            multiple=True,
+            custom_value=True,
+            mode=SelectSelectorMode.DROPDOWN,
+        )
+    )
+
+
+def _announce_selector() -> EntitySelector:
+    return EntitySelector(EntitySelectorConfig(multiple=True))
+
+
+def _channel_fields(
+    notify_key: str,
+    announce_key: str,
+    hass: HomeAssistant | None,
+    defaults: dict[str, Any],
+) -> dict[Any, Any]:
+    return {
+        vol.Optional(notify_key): _notify_selector(
+            hass, _stored_or_legacy(defaults, notify_key, CONF_NOTIFY)
+        ),
+        vol.Optional(announce_key): _announce_selector(),
+    }
+
+
+def _channel_suggested(
+    merged: dict[str, Any], notify_key: str, announce_key: str
+) -> dict[str, Any]:
+    values: dict[str, Any] = {}
+    notify = _notify_values(_stored_or_legacy(merged, notify_key, CONF_NOTIFY))
+    if notify:
+        values[notify_key] = notify
+    announce = _announce_values(_stored_or_legacy(merged, announce_key, CONF_ANNOUNCE))
+    if announce:
+        values[announce_key] = announce
+    return values
+
+
+def _channel_saved(
+    src: dict[str, Any], notify_key: str, announce_key: str
+) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    if notify_key in src:
+        out[notify_key] = _notify_values(src.get(notify_key))
+    if announce_key in src:
+        out[announce_key] = _announce_values(src.get(announce_key))
+    return out
+
+
+_HOME_CHANNELS = (
+    (CONF_NOTIFY_ARRIVE, CONF_NOTIFY_ARRIVE_NOTIFY, CONF_NOTIFY_ARRIVE_ANNOUNCE),
+    (CONF_NOTIFY_LEAVE, CONF_NOTIFY_LEAVE_NOTIFY, CONF_NOTIFY_LEAVE_ANNOUNCE),
+    (
+        CONF_NOTIFY_STATION_ENTER,
+        CONF_NOTIFY_STATION_ENTER_NOTIFY,
+        CONF_NOTIFY_STATION_ENTER_ANNOUNCE,
+    ),
+    (
+        CONF_NOTIFY_STATION_LEAVE,
+        CONF_NOTIFY_STATION_LEAVE_NOTIFY,
+        CONF_NOTIFY_STATION_LEAVE_ANNOUNCE,
+    ),
+)
+_WORK_CHANNELS = (
+    (CONF_WORK_NOTIFY, CONF_WORK_NOTIFY_NOTIFY, CONF_WORK_NOTIFY_ANNOUNCE),
+)
+
+
+def _channel_errors(
+    src: dict[str, Any], channels: tuple[tuple[str, str, str], ...]
+) -> dict[str, str]:
+    errors: dict[str, str] = {}
+    for enabled, notify_key, announce_key in channels:
+        if not src.get(enabled):
+            continue
+        if _notify_values(src.get(notify_key)) or _announce_values(src.get(announce_key)):
+            continue
+        errors[notify_key] = "notify_or_announce"
+        errors[announce_key] = "notify_or_announce"
+    return errors
 
 
 def _coord_box(min_v: float, max_v: float) -> NumberSelector:
@@ -342,7 +427,6 @@ def _shared_fields(
     include_name: bool = False,
     defaults: dict[str, Any] | None = None,
     hass: HomeAssistant | None = None,
-    include_test: bool = False,
 ) -> dict[Any, Any]:
     defaults = defaults or {}
     schema: dict[Any, Any] = {}
@@ -356,25 +440,6 @@ def _shared_fields(
             vol.Optional(CONF_INDOOR_SENSOR, default=[]): EntitySelector(
                 EntitySelectorConfig(domain="sensor", multiple=True)
             ),
-            vol.Optional(CONF_NOTIFY): SelectSelector(
-                SelectSelectorConfig(
-                    options=_notify_options(hass, _get(defaults, CONF_NOTIFY, None)),
-                    multiple=True,
-                    custom_value=True,
-                    mode=SelectSelectorMode.DROPDOWN,
-                )
-            ),
-            vol.Optional(CONF_ANNOUNCE): EntitySelector(
-                EntitySelectorConfig(multiple=True)
-            ),
-        }
-    )
-    if include_test:
-        schema[vol.Optional("test_announce")] = _AnnounceTest(
-            tr(hass, "announce_test_button") if hass else "测试播报"
-        )
-    schema.update(
-        {
             vol.Optional(CONF_AMAP_KEY): TextSelector(
                 TextSelectorConfig(type=TextSelectorType.PASSWORD)
             ),
@@ -404,14 +469,6 @@ def _shared_values(
     else:
         indoor = []
     values[CONF_INDOOR_SENSOR] = indoor
-    notify = _notify_values(_get(defaults, CONF_NOTIFY, None))
-    if notify:
-        values[CONF_NOTIFY] = notify
-    announce = _get(defaults, CONF_ANNOUNCE, None)
-    if announce:
-        values[CONF_ANNOUNCE] = (
-            [announce] if isinstance(announce, str) else list(announce)
-        )
     amap_key = _get(defaults, CONF_AMAP_KEY, None)
     if amap_key:
         values[CONF_AMAP_KEY] = amap_key
@@ -434,20 +491,6 @@ def _shared_options(
         indoor = existing.get(CONF_INDOOR_SENSOR) or []
         if isinstance(indoor, str):
             indoor = [indoor]
-    if CONF_NOTIFY in src:
-        notify = _notify_values(src.get(CONF_NOTIFY))
-    else:
-        notify = _notify_values(existing.get(CONF_NOTIFY))
-    if CONF_ANNOUNCE in src:
-        announce = src.get(CONF_ANNOUNCE) or []
-        if isinstance(announce, str):
-            announce = [announce]
-        announce = list(announce)
-    else:
-        announce = existing.get(CONF_ANNOUNCE) or []
-        if isinstance(announce, str):
-            announce = [announce]
-        announce = list(announce)
     if CONF_AMAP_KEY in src:
         amap_key = src.get(CONF_AMAP_KEY) or existing.get(CONF_AMAP_KEY)
     else:
@@ -459,8 +502,6 @@ def _shared_options(
     return {
         CONF_TOTAL_PEOPLE: int(src.get(CONF_TOTAL_PEOPLE, DEFAULT_TOTAL_PEOPLE)),
         CONF_INDOOR_SENSOR: indoor,
-        CONF_NOTIFY: notify,
-        CONF_ANNOUNCE: announce,
         CONF_AMAP_KEY: amap_key or None,
         CONF_HOLIDAY_SENSOR: holiday_sensor or None,
     }
@@ -477,13 +518,31 @@ def _home_rules_schema(hass: HomeAssistant | None = None, defaults: dict[str, An
             {"collapsed": False},
         ),
         vol.Required(CONF_NOTIFY_ARRIVE): BooleanSelector(),
+        **_channel_fields(
+            CONF_NOTIFY_ARRIVE_NOTIFY, CONF_NOTIFY_ARRIVE_ANNOUNCE, hass, defaults
+        ),
         vol.Required(CONF_NOTIFY_LEAVE): BooleanSelector(),
+        **_channel_fields(
+            CONF_NOTIFY_LEAVE_NOTIFY, CONF_NOTIFY_LEAVE_ANNOUNCE, hass, defaults
+        ),
         **_notify_time_fields(),
         vol.Required(CONF_NOTIFY_STATION_ENTER): BooleanSelector(),
+        **_channel_fields(
+            CONF_NOTIFY_STATION_ENTER_NOTIFY,
+            CONF_NOTIFY_STATION_ENTER_ANNOUNCE,
+            hass,
+            defaults,
+        ),
         vol.Optional(CONF_STATION_ENTER_ZONES): EntitySelector(
             EntitySelectorConfig(domain="zone", multiple=True)
         ),
         vol.Required(CONF_NOTIFY_STATION_LEAVE): BooleanSelector(),
+        **_channel_fields(
+            CONF_NOTIFY_STATION_LEAVE_NOTIFY,
+            CONF_NOTIFY_STATION_LEAVE_ANNOUNCE,
+            hass,
+            defaults,
+        ),
         vol.Optional(CONF_STATION_LEAVE_ZONES): EntitySelector(
             EntitySelectorConfig(domain="zone", multiple=True)
         ),
@@ -499,13 +558,25 @@ def _suggested_home_rules(
     values: dict[str, Any] = {
         _AREA_SECTION: _area_values(merged),
         CONF_NOTIFY_ARRIVE: _get(merged, CONF_NOTIFY_ARRIVE, DEFAULT_NOTIFY_ARRIVE),
+        **_channel_suggested(
+            merged, CONF_NOTIFY_ARRIVE_NOTIFY, CONF_NOTIFY_ARRIVE_ANNOUNCE
+        ),
         CONF_NOTIFY_LEAVE: _get(merged, CONF_NOTIFY_LEAVE, DEFAULT_NOTIFY_LEAVE),
+        **_channel_suggested(
+            merged, CONF_NOTIFY_LEAVE_NOTIFY, CONF_NOTIFY_LEAVE_ANNOUNCE
+        ),
         **_notify_time_values(merged),
         CONF_NOTIFY_STATION_ENTER: _get(
             merged, CONF_NOTIFY_STATION_ENTER, DEFAULT_NOTIFY_STATION_ENTER
         ),
+        **_channel_suggested(
+            merged, CONF_NOTIFY_STATION_ENTER_NOTIFY, CONF_NOTIFY_STATION_ENTER_ANNOUNCE
+        ),
         CONF_NOTIFY_STATION_LEAVE: _get(
             merged, CONF_NOTIFY_STATION_LEAVE, DEFAULT_NOTIFY_STATION_LEAVE
+        ),
+        **_channel_suggested(
+            merged, CONF_NOTIFY_STATION_LEAVE_NOTIFY, CONF_NOTIFY_STATION_LEAVE_ANNOUNCE
         ),
         CONF_RESET_HOME_DURATION: _get(
             merged, CONF_RESET_HOME_DURATION, DEFAULT_RESET_HOME_DURATION
@@ -552,13 +623,23 @@ def _normalize_home_rules(src: dict[str, Any]) -> dict[str, Any]:
         CONF_HOME_ZONES: home,
         **_area_from_src(src),
         CONF_NOTIFY_ARRIVE: bool(src.get(CONF_NOTIFY_ARRIVE, DEFAULT_NOTIFY_ARRIVE)),
+        **_channel_saved(
+            src, CONF_NOTIFY_ARRIVE_NOTIFY, CONF_NOTIFY_ARRIVE_ANNOUNCE
+        ),
         CONF_NOTIFY_LEAVE: bool(src.get(CONF_NOTIFY_LEAVE, DEFAULT_NOTIFY_LEAVE)),
+        **_channel_saved(src, CONF_NOTIFY_LEAVE_NOTIFY, CONF_NOTIFY_LEAVE_ANNOUNCE),
         **_notify_times_from_src(src),
         CONF_NOTIFY_STATION_ENTER: bool(
             src.get(CONF_NOTIFY_STATION_ENTER, DEFAULT_NOTIFY_STATION_ENTER)
         ),
+        **_channel_saved(
+            src, CONF_NOTIFY_STATION_ENTER_NOTIFY, CONF_NOTIFY_STATION_ENTER_ANNOUNCE
+        ),
         CONF_NOTIFY_STATION_LEAVE: bool(
             src.get(CONF_NOTIFY_STATION_LEAVE, DEFAULT_NOTIFY_STATION_LEAVE)
+        ),
+        **_channel_saved(
+            src, CONF_NOTIFY_STATION_LEAVE_NOTIFY, CONF_NOTIFY_STATION_LEAVE_ANNOUNCE
         ),
         CONF_STATION_ENTER_ZONES: list(enter_zones),
         CONF_STATION_LEAVE_ZONES: list(leave_zones),
@@ -655,6 +736,9 @@ def _work_rules_schema(
             NumberSelectorConfig(min=1, max=28, step=1, mode=NumberSelectorMode.BOX)
         ),
         vol.Required(CONF_WORK_NOTIFY): BooleanSelector(),
+        **_channel_fields(
+            CONF_WORK_NOTIFY_NOTIFY, CONF_WORK_NOTIFY_ANNOUNCE, hass, defaults
+        ),
     }
 
 
@@ -679,8 +763,15 @@ _RULE_DEFAULTS = {
 }
 
 
-def _suggested_work_rules(src: dict[str, Any]) -> dict[str, Any]:
-    suggested = {key: _get(src, key, default) for key, default in _RULE_DEFAULTS.items()}
+def _suggested_work_rules(
+    src: dict[str, Any], fallback: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    fallback = fallback or {}
+    merged = {**fallback, **{k: v for k, v in src.items() if v not in (None, "")}}
+    suggested = {key: _get(merged, key, default) for key, default in _RULE_DEFAULTS.items()}
+    suggested.update(
+        _channel_suggested(merged, CONF_WORK_NOTIFY_NOTIFY, CONF_WORK_NOTIFY_ANNOUNCE)
+    )
     work = _get(src, CONF_WORK_ZONES, None)
     if work:
         suggested[CONF_WORK_ZONES] = [work] if isinstance(work, str) else list(work)
@@ -716,6 +807,7 @@ def _normalize_work_rules(src: dict[str, Any]) -> dict[str, Any]:
             src.get(CONF_MONTHLY_RESET_DAY, DEFAULT_MONTHLY_RESET_DAY)
         ),
         CONF_WORK_NOTIFY: bool(src.get(CONF_WORK_NOTIFY, DEFAULT_WORK_NOTIFY)),
+        **_channel_saved(src, CONF_WORK_NOTIFY_NOTIFY, CONF_WORK_NOTIFY_ANNOUNCE),
     }
     return out
 
@@ -851,6 +943,16 @@ class HomeTimeConfigFlow(ConfigFlow, domain=DOMAIN):
                     _suggested_home_rules(pending),
                 ),
             )
+        errors = _channel_errors(user_input, _HOME_CHANNELS)
+        if errors:
+            return self.async_show_form(
+                step_id="home_rules",
+                data_schema=self.add_suggested_values_to_schema(
+                    vol.Schema(_home_rules_schema(self.hass, {**pending, **user_input})),
+                    user_input,
+                ),
+                errors=errors,
+            )
         person = {**pending, **_normalize_home_rules(user_input)}
         self._pending_person = None
         self._people.append(person)
@@ -900,36 +1002,13 @@ class HomeTimeOptionsFlow(OptionsFlow):
     ) -> ConfigFlowResult:
         current = self._entry_fallback()
         if user_input is not None:
-            test = user_input.get("test_announce") == "test"
             options = {**self.config_entry.options}
             options.update(_shared_options(user_input, self.config_entry.options))
-            if test:
-                err = await async_announce(
-                    self.hass,
-                    options.get(CONF_ANNOUNCE) or [],
-                    tr(self.hass, "announce_test"),
-                )
-                if err:
-                    draft = {**current, **options}
-                    return self.async_show_form(
-                        step_id="global",
-                        data_schema=self.add_suggested_values_to_schema(
-                            vol.Schema(
-                                _shared_fields(
-                                    defaults=draft, hass=self.hass, include_test=True
-                                )
-                            ),
-                            _shared_values(draft, hass=self.hass),
-                        ),
-                        errors={"base": err},
-                    )
             return self.async_create_entry(title="", data=options)
         return self.async_show_form(
             step_id="global",
             data_schema=self.add_suggested_values_to_schema(
-                vol.Schema(
-                    _shared_fields(defaults=current, hass=self.hass, include_test=True)
-                ),
+                vol.Schema(_shared_fields(defaults=current, hass=self.hass)),
                 _shared_values(current, hass=self.hass),
             ),
         )
@@ -956,6 +1035,16 @@ class HomeTimeOptionsFlow(OptionsFlow):
                 ),
             )
         if CONF_NOTIFY_ARRIVE in user_input:
+            errors = _channel_errors(user_input, _HOME_CHANNELS)
+            if errors:
+                return self.async_show_form(
+                    step_id="household_form",
+                    data_schema=self.add_suggested_values_to_schema(
+                        vol.Schema(_home_rules_schema(self.hass, user_input)),
+                        user_input,
+                    ),
+                    errors=errors,
+                )
             home_id = self._home_id
             rules = _normalize_home_rules(user_input)
             people = [
@@ -968,7 +1057,11 @@ class HomeTimeOptionsFlow(OptionsFlow):
         return self.async_show_form(
             step_id="household_form",
             data_schema=self.add_suggested_values_to_schema(
-                vol.Schema(_home_rules_schema(self.hass, current)),
+                vol.Schema(
+                    _home_rules_schema(
+                        self.hass, {**self._entry_fallback(), **current}
+                    )
+                ),
                 _suggested_home_rules(current, self._entry_fallback()),
             ),
         )
@@ -986,7 +1079,11 @@ class HomeTimeOptionsFlow(OptionsFlow):
             return self.async_show_form(
                 step_id="household_form",
                 data_schema=self.add_suggested_values_to_schema(
-                    vol.Schema(_home_rules_schema(self.hass, current)),
+                    vol.Schema(
+                        _home_rules_schema(
+                            self.hass, {**self._entry_fallback(), **current}
+                        )
+                    ),
                     _suggested_home_rules(current, self._entry_fallback()),
                 ),
             )
@@ -1023,9 +1120,28 @@ class HomeTimeOptionsFlow(OptionsFlow):
             return self.async_show_form(
                 step_id="add_home_rules",
                 data_schema=self.add_suggested_values_to_schema(
-                    vol.Schema(_home_rules_schema(self.hass, pending)),
+                    vol.Schema(
+                        _home_rules_schema(
+                            self.hass, {**self._entry_fallback(), **pending}
+                        )
+                    ),
                     _suggested_home_rules(pending, self._entry_fallback()),
                 ),
+            )
+        errors = _channel_errors(user_input, _HOME_CHANNELS)
+        if errors:
+            return self.async_show_form(
+                step_id="add_home_rules",
+                data_schema=self.add_suggested_values_to_schema(
+                    vol.Schema(
+                        _home_rules_schema(
+                            self.hass,
+                            {**self._entry_fallback(), **pending, **user_input},
+                        )
+                    ),
+                    user_input,
+                ),
+                errors=errors,
             )
         person = {**pending, **_normalize_home_rules(user_input)}
         self._pending_person = None
@@ -1138,6 +1254,16 @@ class HomeTimeOptionsFlow(OptionsFlow):
                 ),
             )
         if CONF_STANDARD_HOURS in user_input:
+            errors = _channel_errors(user_input, _WORK_CHANNELS)
+            if errors:
+                return self.async_show_form(
+                    step_id="edit_work_form",
+                    data_schema=self.add_suggested_values_to_schema(
+                        vol.Schema(_work_rules_schema(self.hass, user_input)),
+                        user_input,
+                    ),
+                    errors=errors,
+                )
             work_id = self._work_id
             rules = _normalize_work_rules(user_input)
             people = [
@@ -1150,8 +1276,12 @@ class HomeTimeOptionsFlow(OptionsFlow):
         return self.async_show_form(
             step_id="edit_work_form",
             data_schema=self.add_suggested_values_to_schema(
-                vol.Schema(_work_rules_schema(self.hass, current)),
-                _suggested_work_rules(current),
+                vol.Schema(
+                    _work_rules_schema(
+                        self.hass, {**self._entry_fallback(), **current}
+                    )
+                ),
+                _suggested_work_rules(current, self._entry_fallback()),
             ),
         )
 
@@ -1168,8 +1298,12 @@ class HomeTimeOptionsFlow(OptionsFlow):
             return self.async_show_form(
                 step_id="edit_work_form",
                 data_schema=self.add_suggested_values_to_schema(
-                    vol.Schema(_work_rules_schema(self.hass, current)),
-                    _suggested_work_rules(current),
+                    vol.Schema(
+                        _work_rules_schema(
+                            self.hass, {**self._entry_fallback(), **current}
+                        )
+                    ),
+                    _suggested_work_rules(current, self._entry_fallback()),
                 ),
             )
         return await self.async_step_edit_work(user_input)

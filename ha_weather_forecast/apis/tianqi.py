@@ -363,7 +363,7 @@ def build_rain_payload(data: dict[str, Any]) -> dict[str, Any] | None:
         sig_parts.append(f"now:{now_level}")
 
     if has_minute and m_level:
-        sig_parts.append(f"m:{_short_time(m_start)}:{m_level}")
+        sig_parts.append(f"m:{m_level}")
 
     forecast_lines: list[str] = []
     car_fc_rain = ""

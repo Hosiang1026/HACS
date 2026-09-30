@@ -136,6 +136,6 @@
     "daily_title": "Daily energy cost",
     "monthly_title": "Monthly energy cost",
     "yearly_title": "Yearly energy cost",
-    "energy_message": "Peak: {peak} kWh\nValley: {valley} kWh\nTotal: {energy} kWh\nCost: {cost} CNY\nTime: {now}"
+    "energy_message": "Peak: {peak} kWh\nValley: {valley} kWh\nTotal: {energy} kWh\nCost: {cost} CNY"
   }
 }

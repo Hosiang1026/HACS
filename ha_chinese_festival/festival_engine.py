@@ -126,6 +126,99 @@ def _date_header(now_s: str, lunar: dict[str, Any], year_diff: int) -> str:
     return now_s
 
 
+def _notify_section(category: str | None, festival: bool, memorial: bool) -> bool:
+    if category in ("birthday", "anniversary"):
+        return memorial
+    return festival
+
+
+def format_merged_notify(
+    data: dict[str, Any],
+    *,
+    festival: bool,
+    memorial: bool,
+    license_on: bool,
+) -> str:
+    solar = str(data.get("solar_date") or "").strip()
+    weekday = str(data.get("weekday") or "").strip()
+    astro = str(data.get("astro") or "").strip()
+    lunar = str(data.get("lunar_date") or "").strip()
+    year_day = data.get("year_day")
+    head = " ".join(x for x in (solar, weekday, astro) if x)
+    if lunar:
+        sub = f"{lunar} 第{year_day}天" if year_day is not None else lunar
+        head = f"{head}\n{sub}" if head else sub
+
+    lines: list[str] = []
+    if festival or memorial:
+        lines.append("📆重要节日 ")
+        today_lines: list[str] = []
+        for item in data.get("today") or []:
+            if not isinstance(item, dict):
+                continue
+            if not _notify_section(item.get("category"), festival, memorial):
+                continue
+            line = _today_notify_line(item).strip()
+            if line:
+                today_lines.append(line)
+        today_lines.sort(key=len)
+        lines.extend(today_lines)
+
+        upcoming: list[tuple[str, int]] = []
+        for item in data.get("upcoming") or []:
+            if not isinstance(item, dict):
+                continue
+            if not _notify_section(item.get("category"), festival, memorial):
+                continue
+            name = str(item.get("name") or "").strip()
+            try:
+                days = int(item.get("days"))
+            except (TypeError, ValueError):
+                continue
+            if name:
+                upcoming.append((name, days))
+        extras: list[str] = []
+        if upcoming:
+            min_days = min(days for _, days in upcoming)
+            nearest = [f"* {name}: {days}天" for name, days in upcoming if days == min_days]
+            extras = [f"· {name}: {days}天" for name, days in upcoming if days != min_days]
+            if nearest:
+                lines.append("📌距离下一个节日")
+                nearest.sort(key=len)
+                nearest[-1] = nearest[-1] + "\n"
+                lines.extend(nearest)
+        if festival:
+            for tip in data.get("tips") or []:
+                text = str(tip)
+                if not text.strip():
+                    continue
+                lines.append(text.rstrip("\n"))
+                if text.endswith("\n"):
+                    lines.append("")
+        if extras:
+            extras.sort(key=cal.get_text_length)
+            lines.extend(extras)
+        if memorial:
+            love = str(data.get("love_content") or "").strip()
+            if love:
+                if lines and lines[-1] != "":
+                    lines.append("")
+                lines.append(love)
+        if lines == ["📆重要节日 "]:
+            lines = []
+    if license_on:
+        lic = str(data.get("license_content") or "").strip()
+        if lic:
+            lines.append(lic)
+    chunks: list[str] = []
+    if head:
+        chunks.append(head)
+        if lines:
+            chunks.append("")
+    chunks.extend(lines)
+    return "\n".join(chunks).strip()
+
+
 def _today_notify_line(item: dict[str, Any]) -> str:
     name = item.get("todayName") or ""
     tdate = item.get("todayDate") or ""
@@ -516,6 +609,14 @@ def compute(
         ),
         "today": today_arr,
         "next": [{"name": x["tempName"], "days": x["tempTime"]} for x in lately_arr],
+        "upcoming": [
+            {
+                "name": x["tempName"],
+                "days": x["tempTime"],
+                "category": x.get("category") or "",
+            }
+            for x in lately_arr
+        ],
         "tips": tips,
         "next_name": next_name,
         "next_days": next_days,
