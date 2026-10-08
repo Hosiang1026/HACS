@@ -1,4 +1,6 @@
 """iCloud component constants."""
+from __future__ import annotations
+
 import re
 
 from homeassistant.const import Platform
@@ -18,6 +20,7 @@ CONF_OFFPEAK_INTERVAL = "offpeak_interval"
 CONF_PERIOD_WEEKDAYS = "period_weekdays"
 CONF_COMMUTE_ENABLED = "commute_enabled"
 CONF_COMMUTE_ZONES = "commute_zones"
+CONF_COMPANY_ZONES = "company_zones"
 CONF_AMAP_KEY = "amap_key"
 CONF_ACTIVITY_ENTITY = "activity_entity"
 
@@ -30,6 +33,7 @@ COMMUTE_BIKE_MAX_KM = 10
 DEFAULT_WITH_FAMILY = False
 DEFAULT_COMMUTE_ENABLED = False
 DEFAULT_COMMUTE_ZONES: list[str] = []
+DEFAULT_COMPANY_ZONES: list[str] = []
 DEFAULT_ACTIVITY_ENTITY: list[str] = []
 
 
@@ -39,7 +43,7 @@ def activity_entities(raw) -> list[str]:
     return [str(item).strip() for item in raw if str(item or "").strip()]
 
 
-DEFAULT_MAX_INTERVAL = 120
+DEFAULT_MAX_INTERVAL = 10
 DEFAULT_PEAK_ENABLED = True
 DEFAULT_PEAK_WINDOWS = "07:00-09:00,17:00-20:00"
 DEFAULT_PEAK_INTERVAL = 10
@@ -47,16 +51,9 @@ DEFAULT_OFFPEAK_ENABLED = True
 DEFAULT_OFFPEAK_WINDOWS = "20:00-00:00"
 DEFAULT_OFFPEAK_INTERVAL = 60
 DEFAULT_PERIOD_WEEKDAYS = True
-LOCAL_DISTANCE_KM = 30
-FAR_DISTANCE_KM = 50
-HOME_EXIT_BUFFER_M = 200
-FAR_INTERVAL_50_100 = 120
-FAR_INTERVAL_100_200 = 180
-FAR_INTERVAL_200_300 = 240
-FAR_INTERVAL_300_800 = 300
-FAR_INTERVAL_800_2000 = 360
-FAR_INTERVAL_2000_PLUS = 720
-LOW_BATTERY_LEVEL = 20
+HOME_EXIT_BUFFER_M = 500
+HOME_UPDATE_INTERVAL = 120
+LOW_BATTERY_THRESHOLD = 10
 
 _WINDOW_RE = re.compile(r"^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$")
 HOUR_SLOTS = [f"{hour:02d}:00-{(hour + 1) % 24:02d}:00" for hour in range(24)]

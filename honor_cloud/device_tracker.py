@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from datetime import datetime
 import logging
-import math
-import re
 from typing import Any
 
 from homeassistant.components.device_tracker import SourceType, TrackerEntity
@@ -13,82 +11,14 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import DOMAIN, PARALLEL_UPDATES
 from .coordinator import SyncCoordinator
+from .device_ids import generate_slug, get_stable_device_id, wgs84_to_gcj02
+from .runtime_data import get_runtime
 
 _LOGGER = logging.getLogger(__name__)
 
-
-def wgs84_to_gcj02(lng: float, lat: float) -> tuple[float, float]:
-    """WGS84 → GCJ-02"""
-    if not (72.004 <= lng <= 137.8347 and 0.8293 <= lat <= 55.8271):
-        return lng, lat
-
-    a = 6378245.0
-    ee = 0.00669342162296594323
-
-    def _transform_lat(x: float, y: float) -> float:
-        ret = -100.0 + 2.0 * x + 3.0 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * math.sqrt(abs(x))
-        ret += (20.0 * math.sin(6.0 * x * math.pi) + 20.0 * math.sin(2.0 * x * math.pi)) * 2.0 / 3.0
-        ret += (20.0 * math.sin(y * math.pi) + 40.0 * math.sin(y / 3.0 * math.pi)) * 2.0 / 3.0
-        ret += (160.0 * math.sin(y / 12.0 * math.pi) + 320.0 * math.sin(y * math.pi / 30.0)) * 2.0 / 3.0
-        return ret
-
-    def _transform_lng(x: float, y: float) -> float:
-        ret = 300.0 + x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * math.sqrt(abs(x))
-        ret += (20.0 * math.sin(6.0 * x * math.pi) + 20.0 * math.sin(2.0 * x * math.pi)) * 2.0 / 3.0
-        ret += (20.0 * math.sin(x * math.pi) + 40.0 * math.sin(x / 3.0 * math.pi)) * 2.0 / 3.0
-        ret += (150.0 * math.sin(x / 12.0 * math.pi) + 300.0 * math.sin(x / 30.0 * math.pi)) * 2.0 / 3.0
-        return ret
-
-    dlat = _transform_lat(lng - 105.0, lat - 35.0)
-    dlng = _transform_lng(lng - 105.0, lat - 35.0)
-    radlat = lat / 180.0 * math.pi
-    magic = math.sin(radlat)
-    magic = 1 - ee * magic * magic
-    sqrtmagic = math.sqrt(magic)
-    dlat = (dlat * 180.0) / ((a * (1 - ee)) / (magic * sqrtmagic) * math.pi)
-    dlng = (dlng * 180.0) / (a / sqrtmagic * math.cos(radlat) * math.pi)
-
-    gcj_lat = lat + dlat
-    gcj_lng = lng + dlng
-
-    return gcj_lng, gcj_lat
-
-
-def _get_stable_device_id(device: dict[str, Any]) -> str | None:
-    device_id = device.get("deviceId") or device.get("device_id")
-    if device_id:
-        return str(device_id)
-
-    device_sn = device.get("deviceSn")
-    if device_sn:
-        return str(device_sn)
-
-    uniq_resource = device.get("uniqResource")
-    if uniq_resource:
-        return str(uniq_resource)
-
-    return None
-
-
-def generate_slug(model: str, device_id: str = "") -> str:
-    if not model or model.strip().lower() in ["unknown", ""]:
-        if device_id and len(device_id) >= 6:
-            short_id = device_id[:6].lower()
-            return f"honor_{short_id}"
-        else:
-            raise ValueError("无法生成 slug：model 和 device_id 均为空")
-
-    text = model.lower().strip()
-    text = re.sub(r'[^a-z0-9]+', '_', text)
-    text = re.sub(r'_+', '_', text)
-    text = text.strip('_')
-
-    if not text.startswith("honor_"):
-        text = f"honor_{text}"
-
-    return text or f"honor_{device_id[:6].lower()}"
+_get_stable_device_id = get_stable_device_id
 
 
 def _create_tracker_entities(
@@ -144,8 +74,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    coordinators = hass.data[DOMAIN][entry.entry_id]
-    sync_coordinator: SyncCoordinator = coordinators["sync_coordinator"]
+    sync_coordinator: SyncCoordinator = get_runtime(entry).sync_coordinator
     known_ids: set[str] = set()
 
     entities = _create_tracker_entities(sync_coordinator, entry, known_ids)
@@ -168,6 +97,7 @@ async def async_setup_entry(
 class HonorTrackerEntity(CoordinatorEntity, TrackerEntity):
 
     _attr_has_entity_name = True
+    _attr_parallel_updates = PARALLEL_UPDATES
     _attr_icon = "mdi:cellphone-marker"
 
     def __init__(
@@ -203,27 +133,10 @@ class HonorTrackerEntity(CoordinatorEntity, TrackerEntity):
 
     @property
     def available(self) -> bool:
-        if not self.coordinator.data:
-            return False
-
-        backend_code = self.coordinator.data.get("code", -1)
-        backend_reason = self.coordinator.data.get("reason", "")
-
-        if backend_code == 990 or backend_reason in ["LOGIN_IN_PROGRESS", "NO_SESSION"]:
-            return False
-
-        if self.coordinator.data.get("need_reauth"):
-            return False
-
         device = self._get_device_data()
         if not device:
             return False
-        lat = device.get("latitude")
-        lng = device.get("longitude")
-        if lat is None or lng is None:
-            return False
-
-        return True
+        return device.get("latitude") is not None and device.get("longitude") is not None
 
     @property
     def source_type(self) -> SourceType:
@@ -342,13 +255,11 @@ class HonorTrackerEntity(CoordinatorEntity, TrackerEntity):
         return attrs
 
     def _get_device_data(self) -> dict[str, Any] | None:
-        if not self.coordinator.data:
-            return None
-
-        devices = self.coordinator.data.get("devices", [])
-        for device in devices:
-            device_id = _get_stable_device_id(device)
-            if device_id == self._device_id:
-                return device
-
-        return None
+        if self.coordinator.data:
+            devices = self.coordinator.data.get("devices", [])
+            for device in devices:
+                device_id = _get_stable_device_id(device)
+                if device_id == self._device_id:
+                    return device
+        known = getattr(self.coordinator, "_last_known_devices", {}).get(self._device_id)
+        return known if isinstance(known, dict) else None

@@ -10,6 +10,9 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from .account import XiaomiAccount, XiaomiDevice, apply_suggested_entity_id
 from .const import DOMAIN
+from .entity import XiaomiAccountEntity
+
+PARALLEL_UPDATES = 1
 
 _DEVICE_TEXTS = (
     ("lost_message", "lost_message", "lost_message", "mdi:message-alert", 200),
@@ -23,7 +26,7 @@ _FIELD_ALIASES = {"clipboard": "clipboard_text"}
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    account: XiaomiAccount = hass.data[DOMAIN][entry.unique_id]
+    account: XiaomiAccount = entry.runtime_data
     tracked: set[str] = set()
 
     @callback
@@ -66,7 +69,7 @@ def add_entities(
         async_add_entities(new_tracked, True)
 
 
-class XiaomiDeviceText(RestoreEntity, TextEntity):
+class XiaomiDeviceText(XiaomiAccountEntity, RestoreEntity, TextEntity):
     _attr_has_entity_name = True
     _attr_should_poll = False
     _attr_mode = TextMode.TEXT

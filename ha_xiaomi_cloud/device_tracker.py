@@ -12,12 +12,15 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .account import XiaomiAccount, XiaomiDevice, apply_suggested_entity_id, gcj02_to_wgs84
 from .const import DOMAIN
+from .entity import XiaomiAccountEntity
+
+PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    account: XiaomiAccount = hass.data[DOMAIN][entry.unique_id]
+    account: XiaomiAccount = entry.runtime_data
     tracked: set[str] = set()
 
     @callback
@@ -46,10 +49,11 @@ def add_entities(
         async_add_entities(new_tracked, True)
 
 
-class XiaomiTrackerEntity(TrackerEntity):
+class XiaomiTrackerEntity(XiaomiAccountEntity, TrackerEntity):
     _attr_should_poll = False
     _attr_has_entity_name = True
     _attr_name = None
+    _attr_force_update = True
 
     def __init__(
         self,

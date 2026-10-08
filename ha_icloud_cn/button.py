@@ -11,6 +11,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .account import IcloudAccount, IcloudDevice, apply_suggested_entity_id
 from .const import DOMAIN, INTEGRATION_HUB_SUFFIX
 
+PARALLEL_UPDATES = 0
+
 _DEVICE_BUTTONS = (
     ("play_sound", "play_sound", "mdi:volume-high"),
     ("send_message", "send_message", "mdi:message-text"),
@@ -21,7 +23,7 @@ _DEVICE_BUTTONS = (
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    account: IcloudAccount = hass.data[DOMAIN][entry.unique_id]
+    account: IcloudAccount = entry.runtime_data
     tracked = set[str]()
     hub_id = f"{entry.unique_id or account.username}{INTEGRATION_HUB_SUFFIX}"
 
@@ -75,6 +77,10 @@ class IcloudHubUpdateButton(ButtonEntity):
         self._attr_unique_id = f"{hub_id}_update"
         self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, hub_id)})
 
+    @property
+    def available(self) -> bool:
+        return self._account.online
+
     async def async_press(self) -> None:
         await self._account.async_keep_alive(force_locate=True)
 
@@ -103,6 +109,13 @@ class IcloudDeviceButton(ButtonEntity):
         self._attr_translation_key = translation_key
         self._attr_icon = icon
         self._attr_suggested_object_id = f"{device.object_slug}_icloud_{action}"
+
+    @property
+    def available(self) -> bool:
+        return (
+            self._account.online
+            and self._device.unique_id in self._account.devices
+        )
 
     @property
     def device_info(self) -> DeviceInfo:

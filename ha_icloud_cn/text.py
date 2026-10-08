@@ -11,6 +11,8 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from .account import IcloudAccount, IcloudDevice, apply_suggested_entity_id
 from .const import DOMAIN
 
+PARALLEL_UPDATES = 0
+
 _DEVICE_TEXTS = (
     ("message", "send_message", "send_message", "mdi:message-text-outline", 200),
     ("lost_message", "lost_message", "lost_message", "mdi:message-alert", 200),
@@ -21,7 +23,7 @@ _DEVICE_TEXTS = (
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    account: IcloudAccount = hass.data[DOMAIN][entry.unique_id]
+    account: IcloudAccount = entry.runtime_data
     tracked = set[str]()
 
     @callback
@@ -99,6 +101,13 @@ class IcloudDeviceText(RestoreEntity, TextEntity):
         self._attr_icon = icon
         self._attr_native_max = native_max
         self._attr_suggested_object_id = f"{device.object_slug}_icloud_{suffix}"
+
+    @property
+    def available(self) -> bool:
+        return (
+            self._account.online
+            and self._device.unique_id in self._account.devices
+        )
 
     @property
     def device_info(self) -> DeviceInfo:

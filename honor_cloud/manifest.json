@@ -6,9 +6,9 @@
   "config_flow": true,
   "iot_class": "cloud_polling",
   "integration_type": "service",
-  "codeowners": [],
-  "documentation": "",
-  "issue_tracker": "",
-  "homeassistant": "2024.7.0",
+  "codeowners": ["@Hosiang1026"],
+  "documentation": "https://github.com/Hosiang1026/HACS/tree/main/honor_cloud",
+  "issue_tracker": "https://github.com/Hosiang1026/HACS/issues",
+  "homeassistant": "2026.9.0",
   "loggers": ["custom_components.honor_cloud"]
 }

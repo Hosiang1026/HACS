@@ -32,7 +32,6 @@ from pyicloud.exceptions import (
 )
 from pyicloud.services.findmyiphone import AppleDevice
 
-from homeassistant.components.zone import async_active_zone
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_USERNAME
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
@@ -52,7 +51,6 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import slugify
 from homeassistant.util.async_ import run_callback_threadsafe
 from homeassistant.util.dt import now as dt_now, utcnow
-from homeassistant.util.location import distance
 
 from .const import (
     ACTIVITY_BIKE,
@@ -62,6 +60,8 @@ from .const import (
     CONF_AMAP_KEY,
     CONF_COMMUTE_ENABLED,
     CONF_COMMUTE_ZONES,
+    CONF_COMPANY_ZONES,
+    CONF_MAX_INTERVAL,
     CONF_OFFPEAK_ENABLED,
     CONF_OFFPEAK_INTERVAL,
     CONF_OFFPEAK_WINDOWS,
@@ -74,6 +74,8 @@ from .const import (
     DEFAULT_ACTIVITY_ENTITY,
     DEFAULT_COMMUTE_ENABLED,
     DEFAULT_COMMUTE_ZONES,
+    DEFAULT_COMPANY_ZONES,
+    DEFAULT_MAX_INTERVAL,
     DEFAULT_OFFPEAK_ENABLED,
     DEFAULT_OFFPEAK_INTERVAL,
     DEFAULT_OFFPEAK_WINDOWS,
@@ -111,17 +113,10 @@ from .const import (
     DEVICE_STATUS_CODES,
     DEVICE_STATUS_SET,
     DOMAIN,
-    FAR_DISTANCE_KM,
-    FAR_INTERVAL_100_200,
-    FAR_INTERVAL_200_300,
-    FAR_INTERVAL_2000_PLUS,
-    FAR_INTERVAL_300_800,
-    FAR_INTERVAL_50_100,
-    FAR_INTERVAL_800_2000,
     INTEGRATION_HUB_SUFFIX,
     HOME_EXIT_BUFFER_M,
-    LOCAL_DISTANCE_KM,
-    LOW_BATTERY_LEVEL,
+    HOME_UPDATE_INTERVAL,
+    LOW_BATTERY_THRESHOLD,
     activity_entities,
     in_windows,
     opt_windows_text,
@@ -574,6 +569,9 @@ class IcloudAccount:
         self._locate_restored = False
         self._amap_restored = False
         self._all_in_zone = False
+        self._home_locate_mode = False
+        self._online = True
+        self._unavailable_logged = False
         self._config_entry = config_entry
         self._load_period_options()
 
@@ -670,6 +668,7 @@ class IcloudAccount:
 
         self._reauth_requested = False
         self.hass.data.pop(self._reauth_flag_key(), None)
+        self._mark_online()
         self._schedule_midnight_reset()
         if schedule_update:
             self._query_timestamp = datetime.now(timezone.utc)
@@ -730,6 +729,7 @@ class IcloudAccount:
                 if accept_inaccurate:
                     raise ServiceValidationError("iCloud account is not available")
                 return
+            self._mark_unavailable(str(err))
             self._fetch_interval = 5
             dispatcher_send(self.hass, self.signal_device_update)
             self._schedule_polling(self._fetch_interval)
@@ -857,6 +857,7 @@ class IcloudAccount:
 
         self._update_commute()
         self._finish_device_sync(new_device)
+        self._mark_online()
         self._schedule_polling(self._fetch_interval)
 
     def _finish_device_sync(self, new_device: bool) -> None:
@@ -1018,29 +1019,20 @@ class IcloudAccount:
     def _schedule_polling(self, interval_minutes: float) -> None:
         if self._shutdown or self._reauth_in_progress():
             return
-        all_far = bool(
-            self._devices
-            and all(device._away_far for device in self._devices.values())
-        )
-        if not all_far:
-            period_cap, period_fixed = self._period_interval_cap()
-            if period_fixed:
-                interval_minutes = min(float(interval_minutes), float(period_cap))
-            if self._all_in_zone:
-                if not period_fixed:
-                    until_boundary = self._minutes_until_next_boundary(
-                        peak_starts_only=True
-                    )
-                    if until_boundary is not None:
-                        interval_minutes = min(
-                            interval_minutes, max(until_boundary, 0.05)
-                        )
-            else:
-                until_boundary = self._minutes_until_next_boundary()
-                if until_boundary is not None:
-                    interval_minutes = min(
-                        interval_minutes, max(until_boundary, 0.05)
-                    )
+        if self._all_in_zone:
+            until_boundary = self._minutes_until_next_boundary(
+                peak_starts_only=True
+            )
+            if until_boundary is not None:
+                interval_minutes = min(
+                    float(interval_minutes), max(until_boundary, 0.05)
+                )
+        else:
+            until_boundary = self._minutes_until_next_boundary()
+            if until_boundary is not None:
+                interval_minutes = min(
+                    float(interval_minutes), max(until_boundary, 0.05)
+                )
 
         @callback
         def _schedule() -> None:
@@ -1163,6 +1155,28 @@ class IcloudAccount:
             self.hass.data.get(self._reauth_flag_key())
         )
 
+    @property
+    def online(self) -> bool:
+        return (
+            self._online
+            and not self._shutdown
+            and not self._reauth_in_progress()
+            and self.api is not None
+        )
+
+    def _mark_online(self) -> None:
+        was_logged = self._unavailable_logged
+        self._online = True
+        if was_logged:
+            _LOGGER.info("iCloud account %s is back online", self._username)
+            self._unavailable_logged = False
+
+    def _mark_unavailable(self, reason: str) -> None:
+        self._online = False
+        if not self._unavailable_logged:
+            _LOGGER.info("iCloud account %s is unavailable: %s", self._username, reason)
+            self._unavailable_logged = True
+
     def _reauth_flag_key(self) -> str:
         return f"{DOMAIN}_reauth_{self._config_entry.entry_id}"
 
@@ -1173,6 +1187,7 @@ class IcloudAccount:
         already = bool(self.hass.data.get(self._reauth_flag_key()))
         self._reauth_requested = True
         self.hass.data[self._reauth_flag_key()] = True
+        self._mark_unavailable("authentication required")
         self._cancel_polling()
         self._stop_api()
         if already:
@@ -1191,31 +1206,11 @@ class IcloudAccount:
         return run_callback_threadsafe(loop, func, *args).result(timeout=10)
 
     @callback
-    def _zone_points(self) -> list[tuple[float, float, float]]:
-        points: list[tuple[float, float, float]] = []
-        for entity_id in self.hass.states.async_entity_ids("zone"):
-            zone_state = self.hass.states.get(entity_id)
-            if zone_state is None or zone_state.attributes.get("passive"):
-                continue
-            zone_state_lat = zone_state.attributes.get(DEVICE_LOCATION_LATITUDE)
-            zone_state_long = zone_state.attributes.get(DEVICE_LOCATION_LONGITUDE)
-            if zone_state_lat is None or zone_state_long is None:
-                continue
-            try:
-                radius = float(zone_state.attributes.get("radius") or 100)
-            except (TypeError, ValueError):
-                radius = 100.0
-            points.append((float(zone_state_lat), float(zone_state_long), radius))
-        return points
-
-    @callback
-    def _zone_coordinates(self) -> list[tuple[float, float]]:
-        return [(lat, lon) for lat, lon, _radius in self._zone_points()]
-
-    @callback
-    def _home_zones(self) -> list[tuple[str, str, float, float, float]]:
+    def _zones_from_opt(
+        self, key: str, default: list[str]
+    ) -> list[tuple[str, str, float, float, float]]:
         result: list[tuple[str, str, float, float, float]] = []
-        zone_ids = self._opt(CONF_COMMUTE_ZONES, DEFAULT_COMMUTE_ZONES)
+        zone_ids = self._opt(key, default)
         if isinstance(zone_ids, str):
             zone_ids = [zone_ids] if zone_ids else []
         elif not isinstance(zone_ids, list):
@@ -1235,6 +1230,65 @@ class IcloudAccount:
             name = state.attributes.get("friendly_name") or entity_id
             result.append((entity_id, str(name), float(lat), float(lon), radius))
         return result
+
+    @callback
+    def _home_zones(self) -> list[tuple[str, str, float, float, float]]:
+        return self._zones_from_opt(CONF_COMMUTE_ZONES, DEFAULT_COMMUTE_ZONES)
+
+    @callback
+    def _company_zones(self) -> list[tuple[str, str, float, float, float]]:
+        return self._zones_from_opt(CONF_COMPANY_ZONES, DEFAULT_COMPANY_ZONES)
+
+    def _coords_in_zones(
+        self,
+        lat: float,
+        lon: float,
+        zones: list[tuple[str, str, float, float, float]],
+        expanded: bool,
+    ) -> bool:
+        extra = HOME_EXIT_BUFFER_M if expanded else 0
+        for zone in zones:
+            if _haversine_m(lat, lon, zone[2], zone[3]) <= zone[4] + extra:
+                return True
+        return False
+
+    def _all_devices_home_or_company(self) -> bool:
+        zones = self._home_zones() + self._company_zones()
+        devices = list(self._devices.values())
+        if not zones or not devices:
+            return False
+        expanded = self._home_locate_mode
+        for device in devices:
+            location = device.location
+            if not location:
+                return False
+            lat = location.get(DEVICE_LOCATION_LATITUDE)
+            lon = location.get(DEVICE_LOCATION_LONGITUDE)
+            if lat is None or lon is None:
+                return False
+            if not self._coords_in_zones(float(lat), float(lon), zones, expanded):
+                return False
+        return True
+
+    def _device_at_home_or_company(self, device: IcloudDevice) -> bool:
+        entity_ids = [
+            entity_id
+            for entity_id in activity_entities(
+                self._opt(CONF_ACTIVITY_ENTITY, DEFAULT_ACTIVITY_ENTITY)
+            )
+            if self.hass.states.get(entity_id) is not None
+        ]
+        if self._activity_mode(device, entity_ids) == COMMUTE_MODE_BICYCLING:
+            return True
+        location = device.location
+        zones = self._home_zones() + self._company_zones()
+        if not location or not zones:
+            return False
+        lat = location.get(DEVICE_LOCATION_LATITUDE)
+        lon = location.get(DEVICE_LOCATION_LONGITUDE)
+        if lat is None or lon is None:
+            return False
+        return self._coords_in_zones(float(lat), float(lon), zones, expanded=False)
 
     def _activity_mode(self, device: IcloudDevice, entity_ids: list[str]) -> str | None:
         if not entity_ids:
@@ -1370,6 +1424,9 @@ class IcloudAccount:
         return parse_windows(opt_windows_text(self._opt(key, default), default)) or []
 
     def _load_period_options(self) -> None:
+        self._max_interval = int(
+            self._opt(CONF_MAX_INTERVAL, DEFAULT_MAX_INTERVAL)
+        )
         self._peak_enabled = bool(
             self._opt(CONF_PEAK_ENABLED, DEFAULT_PEAK_ENABLED)
         )
@@ -1407,102 +1464,32 @@ class IcloudAccount:
         return self._max_interval, False
 
     def _period_interval(self) -> int:
-        value, fixed = self._period_interval_cap()
-        if fixed:
-            return value
-        return random.randint(1, value)
+        if self._all_devices_home_or_company():
+            self._home_locate_mode = True
+            self._all_in_zone = True
+            return random.randint(10, HOME_UPDATE_INTERVAL)
+        self._home_locate_mode = False
+        self._all_in_zone = False
+        value, _fixed = self._period_interval_cap()
+        return value
 
-    def _local_interval(
-        self, in_zone: bool, battery_level: int | None = None
-    ) -> int:
-        if in_zone:
-            now = dt_now()
-            now_min = now.hour * 60 + now.minute
-            if (
-                self._weekday_periods(now.weekday())
-                and self._peak_enabled
-                and in_windows(now_min, self._peak_windows)
-            ):
-                return self._peak_interval
-            return self._max_interval
-        value, fixed = self._period_interval_cap()
-        if battery_level is not None and battery_level <= LOW_BATTERY_LEVEL:
-            value *= 2
-        if fixed:
-            return value
-        return random.randint(1, value)
-
-    def _far_interval(self, km: float, battery_level: int | None) -> int:
-        if km < 100:
-            interval = FAR_INTERVAL_50_100
-        elif km < 200:
-            interval = FAR_INTERVAL_100_200
-        elif km < 300:
-            interval = FAR_INTERVAL_200_300
-        elif km < 800:
-            interval = FAR_INTERVAL_300_800
-        elif km < 2000:
-            interval = FAR_INTERVAL_800_2000
-        else:
-            interval = FAR_INTERVAL_2000_PLUS
-        if battery_level is not None and battery_level <= LOW_BATTERY_LEVEL:
-            interval *= 2
-        return random.randint(1, interval)
-
-    def _probe_device_geo(self, device: IcloudDevice) -> tuple[bool | None, float | None]:
-        if device.location is None:
-            return None, None
-        device_lat = device.location.get(DEVICE_LOCATION_LATITUDE)
-        device_long = device.location.get(DEVICE_LOCATION_LONGITUDE)
-        device_accuracy = device.location.get(DEVICE_LOCATION_HORIZONTAL_ACCURACY)
-        if device_lat is None or device_long is None:
-            return None, None
-        try:
-            current_zone = self._hass_call(
-                async_active_zone,
-                self.hass,
-                device_lat,
-                device_long,
-                device_accuracy or 0,
-            )
-        except TimeoutError:
-            if device._zone_sticky:
-                return True, 0.0
-            return None, None
-        try:
-            zone_points = self._hass_call(self._zone_points)
-        except TimeoutError:
-            if device._zone_sticky:
-                return True, 0.0
-            zone_points = []
-        min_km = None
-        nearest_extra_m = None
-        for zone_lat, zone_lon, zone_radius in zone_points:
-            zone_distance = distance(
-                device_lat,
-                device_long,
-                zone_lat,
-                zone_lon,
-            )
-            if zone_distance is None:
+    def _apply_low_battery_slowdown(self, interval: int) -> int:
+        if self._home_locate_mode:
+            return interval
+        for device in self._devices.values():
+            battery = device.battery_level
+            if battery is None or battery >= LOW_BATTERY_THRESHOLD:
                 continue
-            km = round(zone_distance / 1000, 1)
-            if min_km is None or km < min_km:
-                min_km = km
-            extra = zone_distance - zone_radius
-            if nearest_extra_m is None or extra < nearest_extra_m:
-                nearest_extra_m = extra
-        if current_zone is not None:
-            device._zone_sticky = True
-            return True, 0.0
-        if device._zone_sticky:
-            if nearest_extra_m is None or nearest_extra_m <= HOME_EXIT_BUFFER_M:
-                return True, 0.0
-            device._zone_sticky = False
-        elif nearest_extra_m is not None and nearest_extra_m <= 0:
-            device._zone_sticky = True
-            return True, 0.0
-        return False, min_km
+            if self._device_at_home_or_company(device):
+                continue
+            return 60
+        return interval
+
+    @callback
+    def _interval_context(self) -> tuple[int, bool]:
+        self._load_period_options()
+        interval = self._apply_low_battery_slowdown(self._period_interval())
+        return interval, self._all_in_zone
 
     def _minutes_until_next_boundary(
         self, *, peak_starts_only: bool = False
@@ -1550,47 +1537,14 @@ class IcloudAccount:
         return soonest
 
     def _determine_interval(self) -> int:
-        intervals: list[int] = []
-        all_in_zone = True
-        saw_device = False
-        for device in self._devices.values():
-            if self._shutdown:
-                break
-            saw_device = True
-            in_zone, km = self._probe_device_geo(device)
-            if in_zone is True:
-                device._away_far = False
-                intervals.append(self._local_interval(True))
-                continue
-            all_in_zone = False
-            if in_zone is None:
-                value, fixed = self._period_interval_cap()
-                battery_level = device.battery_level
-                if battery_level is not None and battery_level <= LOW_BATTERY_LEVEL:
-                    value *= 2
-                intervals.append(value if fixed else self._max_interval)
-                continue
-            if km is None:
-                intervals.append(
-                    self._local_interval(False, device.battery_level)
-                )
-                continue
-            if device._away_far:
-                if km < LOCAL_DISTANCE_KM:
-                    device._away_far = False
-            elif km > FAR_DISTANCE_KM:
-                device._away_far = True
-            if device._away_far:
-                intervals.append(self._far_interval(km, device.battery_level))
-            else:
-                intervals.append(
-                    self._local_interval(False, device.battery_level)
-                )
-        self._all_in_zone = bool(saw_device and all_in_zone and intervals)
-        if not intervals:
+        try:
+            interval, all_in_zone = self._hass_call(self._interval_context)
+            self._all_in_zone = all_in_zone
+            return interval
+        except TimeoutError:
+            self._home_locate_mode = False
             self._all_in_zone = False
             return self._max_interval
-        return min(intervals)
 
     def keep_alive(self, now=None, force_locate: bool = False) -> None:
         """Keep the API alive."""
@@ -1679,12 +1633,14 @@ class IcloudAccount:
                     raise ServiceValidationError("iCloud account is not available")
                 return
             except ConfigEntryNotReady:
+                self._mark_unavailable("service not ready")
                 if not self._reauth_in_progress():
                     self._schedule_polling(self._fetch_interval)
                 if force_locate:
                     raise ServiceValidationError("iCloud account is not available")
                 return
             api = self.api
+            self._mark_online()
 
         if self._shutdown or api is None:
             if force_locate:
@@ -1832,7 +1788,6 @@ class IcloudDevice:
         self._battery_level: int | None = None
         self._battery_status = None
         self._location = None
-        self._away_far = False
         self._last_lat: float | None = None
         self._last_lon: float | None = None
         self._last_ts: float | None = None
@@ -1851,7 +1806,6 @@ class IcloudDevice:
         self._amap_route_key: tuple[int, int, int, int, str] | None = None
         self._home_entered_at: float | None = None
         self._home_address_done = False
-        self._zone_sticky = False
         self._commute_inside = False
         self.send_message = ""
         self.lost_number = ""

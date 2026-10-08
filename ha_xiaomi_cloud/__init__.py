@@ -97,9 +97,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not coordinator.last_update_success and not account.devices:
         from homeassistant.exceptions import ConfigEntryNotReady
 
-        raise ConfigEntryNotReady("无法从小米云服务获取数据")
+        raise ConfigEntryNotReady("Unable to fetch data from Xiaomi Cloud")
 
-    hass.data[DOMAIN][entry.unique_id] = account
+    entry.runtime_data = account
+    hass.data.setdefault(DOMAIN, {})[entry.unique_id] = account
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     _register_services(hass)
@@ -113,7 +114,7 @@ def _register_services(hass: HomeAssistant) -> None:
     async def async_update_account(service: ServiceCall) -> None:
         account_id = service.data.get(ATTR_ACCOUNT)
         if account_id is None:
-            for account in hass.data.get(DOMAIN, {}).values():
+            for account in _iter_accounts(hass):
                 await account.async_keep_alive(force_locate=True)
             return
         account = _get_account(hass, account_id)
@@ -210,19 +211,29 @@ def _register_services(hass: HomeAssistant) -> None:
     )
 
 
+def _iter_accounts(hass: HomeAssistant):
+    for entry in hass.config_entries.async_entries(DOMAIN):
+        account = entry.runtime_data
+        if isinstance(account, XiaomiAccount):
+            yield account
+
+
 def _get_account(hass: HomeAssistant, account_identifier: str) -> XiaomiAccount:
-    domain_data = hass.data.get(DOMAIN)
-    if not domain_data:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_account_configured",
-        )
-    account = domain_data.get(account_identifier)
+    account = None
+    for entry in hass.config_entries.async_entries(DOMAIN):
+        if entry.runtime_data is None:
+            continue
+        if entry.unique_id == account_identifier or entry.data.get(CONF_USERNAME) == account_identifier:
+            account = entry.runtime_data
+            break
     if account is None:
-        for item in domain_data.values():
-            if item.username == account_identifier:
-                account = item
-                break
+        domain_data = hass.data.get(DOMAIN, {})
+        account = domain_data.get(account_identifier)
+        if account is None:
+            for item in domain_data.values():
+                if item.username == account_identifier:
+                    account = item
+                    break
     if account is None:
         raise ServiceValidationError(
             translation_domain=DOMAIN,
@@ -253,8 +264,12 @@ async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.unique_id, None)
-        if not hass.data[DOMAIN]:
+        account = entry.runtime_data
+        if isinstance(account, XiaomiAccount):
+            await account.async_shutdown()
+        entry.runtime_data = None
+        hass.data.get(DOMAIN, {}).pop(entry.unique_id, None)
+        if not hass.data.get(DOMAIN):
             hass.data.pop(DOMAIN)
             for service in (
                 SERVICE_PLAY_SOUND,

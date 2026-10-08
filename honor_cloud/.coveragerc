@@ -1,0 +1,8 @@
+[run]
+source = .
+omit =
+    tests/*
+    activity.csv
+
+[report]
+show_missing = true

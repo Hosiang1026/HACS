@@ -15,6 +15,7 @@ from homeassistant.const import PERCENTAGE
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.icon import icon_for_battery_level
 
@@ -23,12 +24,14 @@ from homeassistant.util.dt import as_local
 from .account import IcloudAccount, IcloudDevice, apply_suggested_entity_id
 from .const import DOMAIN, INTEGRATION_HUB_SUFFIX
 
+PARALLEL_UPDATES = 0
+
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up battery sensor for iCloud component."""
-    account: IcloudAccount = hass.data[DOMAIN][entry.unique_id]
+    account: IcloudAccount = entry.runtime_data
     tracked = set[str]()
     hub_id = f"{entry.unique_id or account.username}{INTEGRATION_HUB_SUFFIX}"
 
@@ -164,6 +167,10 @@ class IcloudHubQueryTimeSensor(SensorEntity):
         self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, hub_id)})
 
     @property
+    def available(self) -> bool:
+        return self._account.online
+
+    @property
     def native_value(self) -> datetime | None:
         return self._account.query_timestamp
 
@@ -203,6 +210,11 @@ class _IcloudHubUsageSensor(RestoreSensor, SensorEntity):
         self._attr_unique_id = f"{hub_id}_{suffix}"
         self._attr_suggested_object_id = f"ha_icloud_cn_{suffix}"
         self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, hub_id)})
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @property
+    def available(self) -> bool:
+        return self._account.online
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -309,6 +321,13 @@ class _IcloudDeviceSensor(SensorEntity):
         else:
             object_suffix = "steps"
         self._attr_suggested_object_id = f"{device.object_slug}_icloud_{object_suffix}"
+
+    @property
+    def available(self) -> bool:
+        return (
+            self._account.online
+            and self._device.unique_id in self._account.devices
+        )
 
     @property
     def device_info(self) -> DeviceInfo:

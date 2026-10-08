@@ -20,6 +20,8 @@ from .const import (
 )
 from .coordinator import StatusCoordinator, SyncCoordinator
 from .exceptions import TemporaryError
+from .runtime_data import HonorCloudRuntimeData, get_runtime
+from .services import async_setup_services, async_unload_services
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,13 +39,13 @@ def _schedule_fast_retry(hass: HomeAssistant, entry: ConfigEntry, coordinator: S
     from homeassistant.helpers.event import async_call_later
 
     entry_id = entry.entry_id
-    domain_data = hass.data.get(DOMAIN, {}).get(entry_id, {})
+    runtime = get_runtime(entry)
 
-    old_task = domain_data.get("fast_retry_task")
+    old_task = runtime.fast_retry_task
     if old_task:
         old_task()
 
-    retry_count = domain_data.get("fast_retry_count", 0)
+    retry_count = runtime.fast_retry_count
     max_retries = 12
 
     if retry_count >= max_retries:
@@ -65,12 +67,12 @@ def _schedule_fast_retry(hass: HomeAssistant, entry: ConfigEntry, coordinator: S
         return
 
     async def _do_fast_retry(_now=None):
-        domain_data = hass.data.get(DOMAIN, {}).get(entry_id)
-        if not domain_data:
+        rt = entry.runtime_data
+        if rt is None:
             return
 
-        retry_count = domain_data.get("fast_retry_count", 0)
-        domain_data["fast_retry_count"] = retry_count + 1
+        retry_count = rt.fast_retry_count
+        rt.fast_retry_count = retry_count + 1
 
         _LOGGER.info(f"[FastRetry] {retry_count + 1}/{max_retries}")
 
@@ -105,11 +107,11 @@ def _schedule_fast_retry(hass: HomeAssistant, entry: ConfigEntry, coordinator: S
                 if code == 0 and devices and reason not in ["NO_SESSION", "LOGIN_IN_PROGRESS"]:
                     _LOGGER.info(f"[FastRetry] 成功获取 {len(devices)} 个设备")
 
-                    old_task = domain_data.get("fast_retry_task")
+                    old_task = rt.fast_retry_task
                     if old_task:
                         old_task()
-                        domain_data["fast_retry_task"] = None
-                    domain_data["fast_retry_count"] = 0
+                        rt.fast_retry_task = None
+                    rt.fast_retry_count = 0
 
                     persistent_notification.async_dismiss(hass, f"{DOMAIN}_initializing_{entry_id}")
 
@@ -143,7 +145,7 @@ def _schedule_fast_retry(hass: HomeAssistant, entry: ConfigEntry, coordinator: S
             _schedule_fast_retry(hass, entry, coordinator)
 
     cancel_fn = async_call_later(hass, 10, _do_fast_retry)
-    domain_data["fast_retry_task"] = cancel_fn
+    runtime.fast_retry_task = cancel_fn
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -196,16 +198,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         return False
 
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry_id] = {
-        "status_coordinator": status_coordinator,
-        "sync_coordinator": sync_coordinator,
-        "timeout_count": 0,
-        "last_timeout_traceback": False,
-        "fast_retry_count": 0,
-        "fast_retry_task": None,
-        "platforms_setup": False,
-    }
+    entry.runtime_data = HonorCloudRuntimeData(
+        status_coordinator=status_coordinator,
+        sync_coordinator=sync_coordinator,
+    )
 
     persistent_notification.async_create(
         hass,
@@ -242,9 +238,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     elif devices:
         _LOGGER.info(f"荣耀云服务集成已加载，获取到 {len(devices)} 个设备")
 
-    hass.data[DOMAIN][entry_id]["timeout_count"] = 0
-    hass.data[DOMAIN][entry_id]["last_timeout_traceback"] = False
-    hass.data[DOMAIN][entry_id]["fast_retry_count"] = 0
+    runtime = get_runtime(entry)
+    runtime.timeout_count = 0
+    runtime.last_timeout_traceback = False
+    runtime.fast_retry_count = 0
 
     if need_fast_retry:
         _schedule_fast_retry(hass, entry, sync_coordinator)
@@ -268,7 +265,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     try:
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-        hass.data[DOMAIN][entry_id]["platforms_setup"] = True
+        get_runtime(entry).platforms_setup = True
     except Exception as e:
         _LOGGER.exception("设置平台失败: %s", e)
         persistent_notification.async_dismiss(hass, f"{DOMAIN}_initializing_{entry_id}")
@@ -278,211 +275,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             message=f"设置平台失败: {e}\n\n请检查日志。",
             notification_id=f"{DOMAIN}_platform_error_{entry_id}",
         )
+        runtime = entry.runtime_data
+        if runtime is not None:
+            try:
+                await runtime.status_coordinator.async_shutdown()
+                await runtime.sync_coordinator.async_shutdown()
+            except Exception as err:
+                _LOGGER.warning("设置平台失败后关闭协调器出错: %s", err)
+            entry.runtime_data = None
         return False
 
-    async def handle_force_sync(call):
-        mode = call.data.get("mode", "normal")
-        _LOGGER.info(f"[Service] 手动触发同步 (mode={mode})")
-
-        if sync_coordinator._refresh_lock.locked():
-            _LOGGER.warning("[Service] 已有同步任务在执行，跳过")
-            persistent_notification.async_create(
-                hass,
-                title="荣耀云服务 同步",
-                message="已有同步任务在执行中，请稍后再试",
-                notification_id=f"{DOMAIN}_force_sync_busy",
-            )
-            return
-
-        try:
-            if mode == "active":
-                await sync_coordinator.async_request_active_locate(force=False)
-            else:
-                await sync_coordinator.async_refresh()
-
-            devices_count = len(sync_coordinator.data.get("devices", [])) if sync_coordinator.data else 0
-            _LOGGER.info(f"[Service] 手动同步完成，设备数={devices_count}")
-
-            persistent_notification.async_create(
-                hass,
-                title="荣耀云服务 同步完成",
-                message=f"同步完成，当前设备数：{devices_count}",
-                notification_id=f"{DOMAIN}_force_sync_done",
-            )
-            import asyncio
-            await asyncio.sleep(3)
-            persistent_notification.async_dismiss(hass, f"{DOMAIN}_force_sync_done")
-
-        except Exception as e:
-            _LOGGER.error(f"[Service] 手动同步失败: {e}")
-            persistent_notification.async_create(
-                hass,
-                title="荣耀云服务 同步失败",
-                message=f"同步失败：{str(e)}",
-                notification_id=f"{DOMAIN}_force_sync_error",
-            )
-
-    if not hass.services.has_service(DOMAIN, "force_sync"):
-        hass.services.async_register(DOMAIN, "force_sync", handle_force_sync)
-
-    async def handle_force_locate(call):
-        """触发主动定位完整链路（locate + poll queryLocateResult）并立即刷新实体。"""
-        _LOGGER.info("[Service] force_locate: 触发主动定位 + 立即刷新")
-        try:
-            await sync_coordinator.async_request_active_locate(force=True)
-            devices_count = len(sync_coordinator.data.get("devices", [])) if sync_coordinator.data else 0
-            fresh_count = sum(1 for d in (sync_coordinator.data or {}).get("devices", []) if d.get("is_fresh"))
-            _LOGGER.info(f"[Service] force_locate 完成，设备={devices_count}，新坐标={fresh_count}")
-        except Exception as e:
-            _LOGGER.error(f"[Service] force_locate 失败: {e}")
-
-    if not hass.services.has_service(DOMAIN, "force_locate"):
-        hass.services.async_register(DOMAIN, "force_locate", handle_force_locate)
-
-    async def handle_ring(call):
-        from homeassistant.helpers import aiohttp_client
-        import aiohttp as _aiohttp
-
-        device_id = call.data.get("device_id", "").strip()
-        action = call.data.get("action", "start").lower()
-
-        if not device_id:
-            _LOGGER.error("[Service] ring: 未提供 device_id")
-            persistent_notification.async_create(
-                hass,
-                title="荣耀云 响铃",
-                message="缺少 device_id，请在服务调用中填写设备 ID。",
-                notification_id=f"{DOMAIN}_ring_error",
-            )
-            return
-
-        base_url = sync_coordinator._base_url
-        session_key = sync_coordinator._session_key
-        api_key = entry.options.get(CONF_API_KEY, "") or entry.data.get(CONF_API_KEY, "")
-
-        url = f"{base_url}/ring"
-        body = {"session_key": session_key, "device": device_id, "action": action}
-        headers: dict = {}
-        if api_key:
-            headers["X-API-Key"] = api_key
-
-        _LOGGER.info(f"[Service] ring: action={action} device=...{device_id[-4:]}")
-        try:
-            session = aiohttp_client.async_get_clientsession(hass)
-            async with session.post(url, json=body, headers=headers, timeout=_aiohttp.ClientTimeout(total=15)) as resp:
-                data = await resp.json()
-        except Exception as e:
-            _LOGGER.error(f"[Service] ring: 请求后端失败: {e}")
-            persistent_notification.async_create(
-                hass,
-                title="荣耀云 响铃失败",
-                message=f"网络错误：{e}",
-                notification_id=f"{DOMAIN}_ring_error",
-            )
-            return
-
-        triggered = data.get("triggered", False)
-        cooldown_left = data.get("cooldown_left")
-
-        if triggered:
-            _LOGGER.info("[Service] ring: ✅ 成功")
-            persistent_notification.async_create(
-                hass,
-                title="荣耀云 响铃",
-                message="✅ 响铃指令已发送，设备应已开始响铃。",
-                notification_id=f"{DOMAIN}_ring_ok",
-            )
-        elif cooldown_left is not None:
-            _LOGGER.info(f"[Service] ring: 后端限流，cooldown_left={cooldown_left}s")
-        else:
-            msg = data.get("msg") or str(data.get("code"))
-            _LOGGER.warning(f"[Service] ring: ❌ 失败: {msg}")
-            persistent_notification.async_create(
-                hass,
-                title="荣耀云 响铃失败",
-                message=f"失败：{msg}",
-                notification_id=f"{DOMAIN}_ring_error",
-            )
-
-    if not hass.services.has_service(DOMAIN, "ring"):
-        hass.services.async_register(DOMAIN, "ring", handle_ring)
-
-    async def handle_lost(call):
-        from homeassistant.helpers import aiohttp_client
-        import aiohttp as _aiohttp
-        from .text import get_lost_fields
-
-        device_id = call.data.get("device_id", "").strip()
-        action = call.data.get("action", "start").lower()
-
-        if not device_id:
-            _LOGGER.error("[Service] lost: 未提供 device_id")
-            persistent_notification.async_create(
-                hass,
-                title="荣耀云 丢失模式",
-                message="缺少 device_id，请在服务调用中填写设备 ID。",
-                notification_id=f"{DOMAIN}_lost_error",
-            )
-            return
-
-        fields = get_lost_fields(hass, entry.entry_id, device_id)
-        password = (call.data.get("password") or fields.get("lost_password") or "").strip()
-        message = (call.data.get("message") or fields.get("lost_message") or "").strip()
-        phone = (call.data.get("phone") or fields.get("lost_number") or "").strip()
-
-        base_url = sync_coordinator._base_url
-        session_key = sync_coordinator._session_key
-        api_key = entry.options.get(CONF_API_KEY, "") or entry.data.get(CONF_API_KEY, "")
-
-        url = f"{base_url}/lost"
-        body = {
-            "session_key": session_key,
-            "device": device_id,
-            "action": action,
-            "password": password,
-            "message": message,
-            "phone": phone,
-        }
-        headers: dict = {}
-        if api_key:
-            headers["X-API-Key"] = api_key
-
-        _LOGGER.info(f"[Service] lost: action={action} device=...{device_id[-4:]}")
-        try:
-            session = aiohttp_client.async_get_clientsession(hass)
-            async with session.post(url, json=body, headers=headers, timeout=_aiohttp.ClientTimeout(total=15)) as resp:
-                data = await resp.json()
-        except Exception as e:
-            _LOGGER.error(f"[Service] lost: 请求后端失败: {e}")
-            persistent_notification.async_create(
-                hass,
-                title="荣耀云 丢失模式失败",
-                message=f"网络错误：{e}",
-                notification_id=f"{DOMAIN}_lost_error",
-            )
-            return
-
-        triggered = data.get("triggered", False)
-        if triggered:
-            _LOGGER.info("[Service] lost: ✅ 成功")
-            persistent_notification.async_create(
-                hass,
-                title="荣耀云 丢失模式",
-                message="✅ 丢失模式指令已发送。",
-                notification_id=f"{DOMAIN}_lost_ok",
-            )
-        else:
-            msg = data.get("msg") or str(data.get("code"))
-            _LOGGER.warning(f"[Service] lost: ❌ 失败: {msg}")
-            persistent_notification.async_create(
-                hass,
-                title="荣耀云 丢失模式失败",
-                message=f"失败：{msg}",
-                notification_id=f"{DOMAIN}_lost_error",
-            )
-
-    if not hass.services.has_service(DOMAIN, "lost"):
-        hass.services.async_register(DOMAIN, "lost", handle_lost)
+    await async_setup_services(hass, entry, sync_coordinator)
 
     return True
 
@@ -496,13 +299,16 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
-        if DOMAIN in hass.data and entry_id in hass.data[DOMAIN]:
-            coordinators = hass.data[DOMAIN].pop(entry_id)
+        runtime = entry.runtime_data
+        if runtime is not None:
             try:
-                await coordinators["status_coordinator"].async_shutdown()
-                await coordinators["sync_coordinator"].async_shutdown()
+                await runtime.status_coordinator.async_shutdown()
+                await runtime.sync_coordinator.async_shutdown()
             except Exception as e:
                 _LOGGER.warning("关闭协调器时出错: %s", e)
+            entry.runtime_data = None
+        if not hass.config_entries.async_entries(DOMAIN):
+            await async_unload_services(hass)
 
         persistent_notification.async_dismiss(hass, f"{DOMAIN}_initializing_{entry_id}")
         persistent_notification.async_dismiss(hass, f"{DOMAIN}_fallback_{entry_id}")

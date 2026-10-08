@@ -1,0 +1,15 @@
+[run]
+source =
+    .
+omit =
+    */pyicloud/*
+    */tests/*
+    */run_tests.py
+    */__pycache__/*
+
+[report]
+precision = 1
+skip_empty = True
+exclude_lines =
+    pragma: no cover
+    if TYPE_CHECKING:

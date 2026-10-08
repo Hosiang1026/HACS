@@ -18,12 +18,14 @@ from .const import (
     DOMAIN,
 )
 
+PARALLEL_UPDATES = 0
+
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up device tracker for iCloud component."""
-    account: IcloudAccount = hass.data[DOMAIN][entry.unique_id]
+    account: IcloudAccount = entry.runtime_data
     tracked = set[str]()
 
     @callback
@@ -85,6 +87,14 @@ class IcloudTrackerEntity(TrackerEntity):
         self._track_key = track_key
         self._unsub_dispatcher: CALLBACK_TYPE | None = None
         self._attr_suggested_object_id = f"{device.object_slug}_icloud"
+
+    @property
+    def available(self) -> bool:
+        return (
+            self._account.online
+            and self._device.unique_id in self._account.devices
+            and self._device.location is not None
+        )
 
     @property
     def unique_id(self) -> str:

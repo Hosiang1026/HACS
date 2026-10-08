@@ -11,11 +11,9 @@ from urllib import parse
 import aiohttp
 import async_timeout
 from aiohttp.client_exceptions import ClientConnectorError
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.event import async_track_point_in_utc_time
-from homeassistant.util.dt import utcnow
 
 from .const import (
     COORDINATE_GCJ02,
@@ -76,6 +74,8 @@ class XiaomiCloudDataUpdateCoordinator(DataUpdateCoordinator):
         self.userId = user_id
         self.login_result = False
         self.service = None
+        self.last_service_ok: bool | None = None
+        self.cloud_reachable = True
         self._last_position_update = {}
         self._Service_Token = None
         self._last_devices_data = []
@@ -84,7 +84,13 @@ class XiaomiCloudDataUpdateCoordinator(DataUpdateCoordinator):
         _LOGGER.info("坐标系: GCJ-02（高德）")
 
         update_interval = datetime.timedelta(minutes=self._scan_interval)
-        super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=update_interval)
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=DOMAIN,
+            update_interval=update_interval,
+            always_update=True,
+        )
 
         if schedule_refresh:
             hass.async_create_task(self._schedule_initial_refresh())
@@ -838,12 +844,14 @@ class XiaomiCloudDataUpdateCoordinator(DataUpdateCoordinator):
   
     async def _send_command(self, data):
         """发送命令入口."""
-        if not data or 'service' not in data or 'data' not in data:
+        if not data or "service" not in data or "data" not in data:
             _LOGGER.warning("命令数据格式不正确，无法发送命令")
+            self.last_service_ok = False
             return
-            
-        self.service_data = data['data']
-        self.service = data['service']
+
+        self.service_data = data["data"]
+        self.service = data["service"]
+        self.last_service_ok = None
         _LOGGER.info("准备发送命令: %s", self.service)
         await self.async_refresh()
 
@@ -985,6 +993,25 @@ class XiaomiCloudDataUpdateCoordinator(DataUpdateCoordinator):
         
         return devices_info
 
+    def _stamp_poll_time(self, devices: list[dict]) -> list[dict]:
+        poll_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        stamped: list[dict] = []
+        for item in devices:
+            row = dict(item)
+            row["last_poll_time"] = poll_time
+            stamped.append(row)
+        return stamped
+
+    def _return_devices(self, devices: list, *, reachable: bool) -> list:
+        self.cloud_reachable = reachable
+        stamped = self._stamp_poll_time(devices)
+        self._last_devices_data = stamped
+        return stamped
+
+    async def async_shutdown(self) -> None:
+        """Stop scheduled updates."""
+        await super().async_shutdown()
+
     async def _async_update_data(self):
         """更新数据，定时调用."""
         _LOGGER.debug("开始数据更新周期，当前更新间隔为 %s 分钟，服务: %s", self._scan_interval, self.service)
@@ -994,24 +1021,29 @@ class XiaomiCloudDataUpdateCoordinator(DataUpdateCoordinator):
         
         try:
             session = async_get_clientsession(self.hass)
-            
+            tracked_command = (
+                self.service
+                if self.service in ("noise", "lost", "clipboard", "find")
+                else None
+            )
+            command_ok: bool | None = None
+
             # 如果设置了特定服务，优先处理
             if self.service in ["noise", "lost", "clipboard", "find"]:
                 if self.login_result is True:
                     _LOGGER.info("执行服务: %s", self.service)
                     if self.service == "noise":
-                        service_result = await self._send_noise_command(session)
+                        command_ok = await self._send_noise_command(session)
                     elif self.service == 'lost':
-                        service_result = await self._send_lost_command(session)
+                        command_ok = await self._send_lost_command(session)
                     elif self.service == 'clipboard':
-                        service_result = await self._send_clipboard_command(session)
+                        command_ok = await self._send_clipboard_command(session)
                     elif self.service == 'find':
-                        service_result = await self._send_find_device_command(session)
+                        command_ok = await self._send_find_device_command(session)
                         self.service = None
                         self.service_data = None
-                    
-                    # 如果服务执行失败可能是登录失效，尝试重新登录
-                    if not service_result:
+
+                    if not command_ok:
                         _LOGGER.info("服务执行失败，尝试重新登录")
                         self.login_result = False
                 else:
@@ -1025,12 +1057,19 @@ class XiaomiCloudDataUpdateCoordinator(DataUpdateCoordinator):
                 login_status = await self._relogin(session, allow_2fa=False)
                 if login_status == LOGIN_NEED_VERIFY:
                     _LOGGER.warning(
-                        "会话失效且需要二次验证，请重新添加集成完成验证码（后台不会自动发码）"
+                        "Session expired; two-factor verification required via reauthentication"
                     )
-                    return self._last_devices_data or []
+                    raise ConfigEntryAuthFailed(
+                        "Two-factor verification required; reauthenticate in Settings"
+                    )
+                if login_status == LOGIN_INVALID:
+                    _LOGGER.warning("Login rejected; credentials may have changed")
+                    raise ConfigEntryAuthFailed("Invalid Xiaomi Cloud credentials")
                 if login_status != LOGIN_OK:
-                    _LOGGER.warning('登录验证失败')
-                    return self._last_devices_data or []
+                    _LOGGER.warning("Login failed during data update")
+                    return self._return_devices(
+                        self._last_devices_data or [], reachable=False
+                    )
 
                 _LOGGER.info("登录成功，获取到%d个设备信息", len(self._device_info))
                 self.login_result = True
@@ -1038,14 +1077,17 @@ class XiaomiCloudDataUpdateCoordinator(DataUpdateCoordinator):
                 if self.service in ["noise", "lost", "clipboard", "find"]:
                     _LOGGER.info("重新尝试执行服务: %s", self.service)
                     if self.service == "noise":
-                        await self._send_noise_command(session)
+                        command_ok = await self._send_noise_command(session)
                     elif self.service == 'lost':
-                        await self._send_lost_command(session)
+                        command_ok = await self._send_lost_command(session)
                     elif self.service == 'clipboard':
-                        await self._send_clipboard_command(session)
+                        command_ok = await self._send_clipboard_command(session)
                     elif self.service == 'find':
-                        await self._send_find_device_command(session)
-            
+                        command_ok = await self._send_find_device_command(session)
+
+            if tracked_command is not None:
+                self.last_service_ok = bool(command_ok)
+
             # 执行定时查找设备逻辑
             _LOGGER.info("执行定时查找设备操作...")
             find_result = await self._send_find_device_command(session)
@@ -1059,6 +1101,12 @@ class XiaomiCloudDataUpdateCoordinator(DataUpdateCoordinator):
                     self.login_result = True
                     _LOGGER.info("重新登录成功，再次尝试查找设备")
                     find_result = await self._send_find_device_command(session)
+                elif login_status == LOGIN_NEED_VERIFY:
+                    raise ConfigEntryAuthFailed(
+                        "Two-factor verification required; reauthenticate in Settings"
+                    )
+                elif login_status == LOGIN_INVALID:
+                    raise ConfigEntryAuthFailed("Invalid Xiaomi Cloud credentials")
                 else:
                     _LOGGER.warning("重新登录失败")
             
@@ -1075,12 +1123,11 @@ class XiaomiCloudDataUpdateCoordinator(DataUpdateCoordinator):
             
             if not location_data:
                 _LOGGER.warning("未能获取设备位置数据")
-                # 如果是登录原因导致的失败，返回上次的数据
                 if not self.login_result:
                     _LOGGER.info("登录状态已失效，返回上次的设备数据")
-                    return self._last_devices_data or []
-                    
-                # 如果不是登录原因，可能是其他原因，创建基本设备信息
+                    return self._return_devices(
+                        self._last_devices_data or [], reachable=False
+                    )
                 if self._device_info:
                     _LOGGER.info("尝试创建基本设备信息...")
                     basic_devices = []
@@ -1110,8 +1157,10 @@ class XiaomiCloudDataUpdateCoordinator(DataUpdateCoordinator):
                                 basic[key] = prev[key]
                         basic_devices.append(basic)
                     _LOGGER.debug("创建了%d个基本设备信息对象", len(basic_devices))
-                    return basic_devices
-                return self._last_devices_data or []
+                    return self._return_devices(basic_devices, reachable=True)
+                return self._return_devices(
+                    self._last_devices_data or [], reachable=False
+                )
             else:
                 _LOGGER.info(f"获取设备位置成功，返回{len(location_data)}个设备数据")
                 last_by_imei = {
@@ -1120,8 +1169,6 @@ class XiaomiCloudDataUpdateCoordinator(DataUpdateCoordinator):
                     if item.get("imei")
                 }
                 for item in location_data:
-                    if item.get("device_lat") is not None:
-                        continue
                     prev = last_by_imei.get(str(item.get("imei"))) or {}
                     for key in (
                         "device_lat",
@@ -1129,26 +1176,26 @@ class XiaomiCloudDataUpdateCoordinator(DataUpdateCoordinator):
                         "device_accuracy",
                         "device_location_update_time",
                         "coordinate_type",
+                        "device_power",
                     ):
                         if item.get(key) is None and prev.get(key) is not None:
                             item[key] = prev[key]
-                self._last_devices_data = location_data
-                devices_data = location_data
+                return self._return_devices(location_data, reachable=True)
 
-            return devices_data
-
+        except ConfigEntryAuthFailed:
+            raise
         except ClientConnectorError as error:
             _LOGGER.error(f"网络连接错误: {error}")
             if self._last_devices_data:
                 _LOGGER.info("使用上次获取的设备数据")
-                return self._last_devices_data
-            raise UpdateFailed(f"网络连接错误: {error}")
+                return self._return_devices(self._last_devices_data, reachable=False)
+            raise UpdateFailed(f"Network connection error: {error}") from error
         except Exception as e:
             _LOGGER.error(f"更新数据时发生未处理的异常: {str(e)}")
             if self._last_devices_data:
                 _LOGGER.info("使用上次获取的设备数据")
-                return self._last_devices_data
-            raise UpdateFailed(f"未处理的异常: {str(e)}")
+                return self._return_devices(self._last_devices_data, reachable=False)
+            raise UpdateFailed(f"Unexpected error: {e}") from e
 
     async def async_config_entry_first_refresh(self):
         """执行首次刷新，在Home Assistant启动时调用."""
@@ -1159,6 +1206,7 @@ class XiaomiCloudDataUpdateCoordinator(DataUpdateCoordinator):
             # 如果有上次的设备数据，先使用它
             if self._last_devices_data:
                 _LOGGER.warning("首次刷新失败，但使用缓存数据保持实体可用: %s", err)
+                self.cloud_reachable = False
                 self.data = self._last_devices_data
                 # 设置一个短暂的重试间隔
                 asyncio.create_task(self._schedule_refresh_retry())
@@ -1182,31 +1230,13 @@ class XiaomiCloudDataUpdateCoordinator(DataUpdateCoordinator):
                 
                 # 更新协调器的更新间隔
                 self.update_interval = datetime.timedelta(minutes=self._scan_interval)
-                
-                # 取消现有的刷新计划并重新安排
                 self._schedule_refresh()
-                
-                # 可选：立即触发一次刷新以应用新设置
-                await self.async_refresh()
-                
                 return True
             _LOGGER.debug("更新间隔未变化，仍为 %s 分钟", self._scan_interval)
             return False
         except Exception as e:
             _LOGGER.error("更新间隔设置失败: %s", str(e))
             return False
-        
-    def _schedule_refresh(self):
-        """重新安排下一次刷新."""
-        if self._unsub_refresh:
-            self._unsub_refresh()
-            
-        self._unsub_refresh = async_track_point_in_utc_time(
-            self.hass,
-            self._handle_refresh_interval,
-            utcnow() + self.update_interval
-        )
-        _LOGGER.info("已重新安排刷新时间，下次将在 %s 分钟后执行", self._scan_interval)
 
     async def _schedule_initial_refresh(self):
         """在初始化后立即调度一次以确保正确应用更新间隔."""

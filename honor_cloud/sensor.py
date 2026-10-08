@@ -18,8 +18,16 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util.dt import as_local
 
-from .const import DOMAIN, ICON_BATTERY, CONF_AMAP_API_KEY, CONF_ENABLE_AMAP, LOW_BATTERY_PERCENT
+from .const import (
+    DOMAIN,
+    ICON_BATTERY,
+    CONF_AMAP_API_KEY,
+    CONF_ENABLE_AMAP,
+    LOW_BATTERY_PERCENT,
+    PARALLEL_UPDATES,
+)
 from .coordinator import SyncCoordinator
+from .runtime_data import get_runtime
 from .device_tracker import _get_stable_device_id, generate_slug
 
 _LOGGER = logging.getLogger(__name__)
@@ -111,8 +119,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    coordinators = hass.data[DOMAIN][entry.entry_id]
-    sync_coordinator: SyncCoordinator = coordinators["sync_coordinator"]
+    sync_coordinator: SyncCoordinator = get_runtime(entry).sync_coordinator
     known_ids: set[str] = set()
 
     async_add_entities(
@@ -143,6 +150,7 @@ async def async_setup_entry(
 
 class HonorHubCreatedAtSensor(SensorEntity):
     _attr_has_entity_name = True
+    _attr_parallel_updates = 0
     _attr_should_poll = False
     _attr_translation_key = "created_at"
     _attr_icon = "mdi:calendar-clock"
@@ -159,6 +167,7 @@ class HonorHubCreatedAtSensor(SensorEntity):
 
 class HonorHubLocateCountSensor(CoordinatorEntity, RestoreSensor, SensorEntity):
     _attr_has_entity_name = True
+    _attr_parallel_updates = PARALLEL_UPDATES
     _attr_icon = "mdi:crosshairs-gps"
     _attr_translation_key = "locate_count"
     _attr_state_class = SensorStateClass.TOTAL
@@ -173,6 +182,10 @@ class HonorHubLocateCountSensor(CoordinatorEntity, RestoreSensor, SensorEntity):
     @property
     def native_value(self) -> int:
         return self.coordinator.locate_count
+
+    @property
+    def available(self) -> bool:
+        return True
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -198,6 +211,7 @@ class HonorHubLocateCountSensor(CoordinatorEntity, RestoreSensor, SensorEntity):
 
 class HonorHubAmapCountSensor(CoordinatorEntity, RestoreSensor, SensorEntity):
     _attr_has_entity_name = True
+    _attr_parallel_updates = PARALLEL_UPDATES
     _attr_icon = "mdi:map-search"
     _attr_translation_key = "amap_count"
     _attr_state_class = SensorStateClass.TOTAL
@@ -212,6 +226,10 @@ class HonorHubAmapCountSensor(CoordinatorEntity, RestoreSensor, SensorEntity):
     @property
     def native_value(self) -> int:
         return self.coordinator.amap_count
+
+    @property
+    def available(self) -> bool:
+        return True
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -241,6 +259,7 @@ class HonorHubAmapCountSensor(CoordinatorEntity, RestoreSensor, SensorEntity):
 class HonorAddressSensor(CoordinatorEntity, SensorEntity):
 
     _attr_has_entity_name = True
+    _attr_parallel_updates = PARALLEL_UPDATES
     _attr_icon = "mdi:map-marker"
 
     def __init__(
@@ -263,7 +282,7 @@ class HonorAddressSensor(CoordinatorEntity, SensorEntity):
 
         self._attr_unique_id = f"{DOMAIN}:{device_id}:address"
         self._attr_suggested_object_id = f"{slug}_address"
-        self._attr_name = "地址"
+        self._attr_translation_key = "address"
         self._last_address: str | None = None
 
     def _unusable(self) -> bool:
@@ -321,8 +340,8 @@ class HonorAddressSensor(CoordinatorEntity, SensorEntity):
             if saved:
                 return saved
             if self._unusable() or not self.coordinator.data:
-                return "初始化中"
-            return "设备离线"
+                return "initializing"
+            return "offline"
 
         fresh = self._fresh_address()
         if fresh:
@@ -336,9 +355,9 @@ class HonorAddressSensor(CoordinatorEntity, SensorEntity):
         lat = device.get("latitude") if device else None
         lng = device.get("longitude") if device else None
         if lat is None or lng is None:
-            return "坐标不可用"
+            return "no_coordinates"
 
-        return "暂无地址"
+        return "no_address"
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -417,21 +436,18 @@ class HonorAddressSensor(CoordinatorEntity, SensorEntity):
         return attrs
 
     def _get_device_data(self) -> dict[str, Any] | None:
-        if not self.coordinator.data:
-            return None
-
-        devices = self.coordinator.data.get("devices", [])
-        for device in devices:
-            device_id = _get_stable_device_id(device)
-            if device_id == self._device_id:
-                return device
-
-        return None
+        if self.coordinator.data:
+            for device in self.coordinator.data.get("devices", []):
+                if _get_stable_device_id(device) == self._device_id:
+                    return device
+        known = getattr(self.coordinator, "_last_known_devices", {}).get(self._device_id)
+        return known if isinstance(known, dict) else None
 
 
 class HonorUpdateTimeSensor(CoordinatorEntity, SensorEntity):
 
     _attr_has_entity_name = True
+    _attr_parallel_updates = PARALLEL_UPDATES
     _attr_icon = "mdi:clock-outline"
 
     def __init__(
@@ -453,7 +469,7 @@ class HonorUpdateTimeSensor(CoordinatorEntity, SensorEntity):
         self._slug = slug
         self._attr_unique_id = f"{DOMAIN}:{device_id}:update_time"
         self._attr_suggested_object_id = f"{slug}_update_time"
-        self._attr_name = "更新时间"
+        self._attr_translation_key = "update_time"
         self._last_time: str | None = None
 
     @property
@@ -492,14 +508,12 @@ class HonorUpdateTimeSensor(CoordinatorEntity, SensorEntity):
         return self._current_time() or self._last_time
 
     def _get_device_data(self) -> dict[str, Any] | None:
-        if not self.coordinator.data:
-            return None
-        devices = self.coordinator.data.get("devices", [])
-        for device in devices:
-            device_id = _get_stable_device_id(device)
-            if device_id == self._device_id:
-                return device
-        return None
+        if self.coordinator.data:
+            for device in self.coordinator.data.get("devices", []):
+                if _get_stable_device_id(device) == self._device_id:
+                    return device
+        known = getattr(self.coordinator, "_last_known_devices", {}).get(self._device_id)
+        return known if isinstance(known, dict) else None
 
 
 def _phone_status(value: Any) -> str | None:
@@ -518,6 +532,7 @@ def _phone_status(value: Any) -> str | None:
 class HonorPhoneStatusSensor(CoordinatorEntity, SensorEntity):
 
     _attr_has_entity_name = True
+    _attr_parallel_updates = PARALLEL_UPDATES
     _attr_icon = "mdi:cellphone"
     _attr_device_class = SensorDeviceClass.ENUM
     _attr_options = ["online", "offline", "unknown"]
@@ -596,6 +611,7 @@ class HonorPhoneStatusSensor(CoordinatorEntity, SensorEntity):
 class HonorBatterySensor(CoordinatorEntity, SensorEntity):
 
     _attr_has_entity_name = True
+    _attr_parallel_updates = PARALLEL_UPDATES
     _attr_device_class = SensorDeviceClass.BATTERY
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = PERCENTAGE
@@ -621,7 +637,7 @@ class HonorBatterySensor(CoordinatorEntity, SensorEntity):
 
         self._attr_unique_id = f"{DOMAIN}:{device_id}:battery"
         self._attr_suggested_object_id = f"{slug}_battery"
-        self._attr_name = "电量"
+        self._attr_translation_key = "battery"
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -634,100 +650,54 @@ class HonorBatterySensor(CoordinatorEntity, SensorEntity):
 
     @property
     def available(self) -> bool:
-        if not self.coordinator.data:
-            return False
-
-        backend_code = self.coordinator.data.get("code", -1)
-        backend_reason = self.coordinator.data.get("reason", "")
-
-        if backend_code == 990 or backend_reason in ["LOGIN_IN_PROGRESS", "NO_SESSION"]:
-            return False
-
-        if self.coordinator.data.get("need_reauth"):
-            return False
-
-        device = self._get_device_data()
-        if not device:
-            return False
-
-        return True
+        return self._get_device_data() is not None
 
     @property
     def native_value(self) -> int | None:
-        if not self.coordinator.data:
-            return None
-
-        backend_code = self.coordinator.data.get("code", -1)
-        backend_reason = self.coordinator.data.get("reason", "")
-
-        if backend_code == 990 or backend_reason in ["LOGIN_IN_PROGRESS", "NO_SESSION"]:
-            return None
-
         device = self._get_device_data()
         if not device:
             return None
-
         battery = device.get("battery")
         if battery is not None:
             try:
                 return int(battery)
             except (ValueError, TypeError):
                 return None
-
         return None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        attrs = {}
-
-        if not self.coordinator.data:
-            attrs["status"] = "initializing"
-            return attrs
-
-        backend_code = self.coordinator.data.get("code", -1)
-        backend_reason = self.coordinator.data.get("reason", "")
-
-        if backend_code == 990 or backend_reason in ["LOGIN_IN_PROGRESS", "NO_SESSION"]:
-            attrs["status"] = "initializing"
-            attrs["message"] = "后台登录中"
-            attrs["last_backend_code"] = backend_code
-            attrs["last_backend_reason"] = backend_reason
-            return attrs
-
+        attrs: dict[str, Any] = {}
         device = self._get_device_data()
-
         if device:
             attrs["status"] = "online"
             attrs["device_id"] = self._device_id
             attrs["model"] = self._model
-
             battery = device.get("battery")
             if battery is not None:
                 try:
-                    battery_int = int(battery)
-                    attrs["is_low_battery"] = battery_int <= LOW_BATTERY_PERCENT
+                    attrs["is_low_battery"] = int(battery) <= LOW_BATTERY_PERCENT
                 except (ValueError, TypeError):
                     pass
         else:
             attrs["status"] = "offline"
-
+        data = self.coordinator.data or {}
+        if data.get("auth_pending") or data.get("code") == 990:
+            attrs["auth_pending"] = True
         return attrs
 
     def _get_device_data(self) -> dict[str, Any] | None:
-        if not self.coordinator.data:
-            return None
-
-        devices = self.coordinator.data.get("devices", [])
-        for device in devices:
-            device_id = _get_stable_device_id(device)
-            if device_id == self._device_id:
-                return device
-
-        return None
+        if self.coordinator.data:
+            for device in self.coordinator.data.get("devices", []):
+                if _get_stable_device_id(device) == self._device_id:
+                    return device
+        known = getattr(self.coordinator, "_last_known_devices", {}).get(self._device_id)
+        return known if isinstance(known, dict) else None
 
 
 class _HonorCommuteSensor(CoordinatorEntity, RestoreSensor):
     _attr_has_entity_name = True
+    _attr_parallel_updates = PARALLEL_UPDATES
 
     def __init__(
         self,
@@ -856,7 +826,19 @@ class HonorCommuteInfoSensor(_HonorCommuteSensor):
 class HonorStatusSensor(CoordinatorEntity, SensorEntity):
 
     _attr_has_entity_name = True
+    _attr_parallel_updates = PARALLEL_UPDATES
     _attr_icon = "mdi:cloud-sync"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_translation_key = "service_status"
+    _attr_options = [
+        "initializing",
+        "waiting_login",
+        "logging_in",
+        "auth_required",
+        "auth_expired",
+        "ok",
+        "error",
+    ]
 
     def __init__(
         self,
@@ -867,7 +849,6 @@ class HonorStatusSensor(CoordinatorEntity, SensorEntity):
         self._entry = entry
         self._attr_unique_id = f"{DOMAIN}:{entry.entry_id}:status"
         self._attr_suggested_object_id = "honor_cloud_status"
-        self._attr_name = "服务状态"
 
     @property
     def available(self) -> bool:
@@ -885,27 +866,24 @@ class HonorStatusSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self) -> str:
         if not self.coordinator.data:
-            return "初始化中"
+            return "initializing"
 
         code = self.coordinator.data.get("code", -1)
         reason = self.coordinator.data.get("reason", "")
 
         if reason == "NO_SESSION":
-            return "等待登录"
+            return "waiting_login"
         if reason == "LOGIN_IN_PROGRESS":
-            return "登录中"
+            return "logging_in"
         if code == 990:
-            return "需要认证"
+            return "auth_required"
         if self.coordinator.data.get("need_reauth"):
-            return "认证过期"
+            return "auth_expired"
 
-        devices = self.coordinator.data.get("devices", [])
-        if code == 0 and devices:
-            return f"正常（{len(devices)}台设备）"
         if code == 0:
-            return "正常"
+            return "ok"
 
-        return f"异常（code={code}）"
+        return "error"
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

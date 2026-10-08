@@ -333,10 +333,7 @@ class WeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._last_alarm_sig = sig or self._last_alarm_sig
             return
         self._last_alarm_sig = sig
-        text = _notify_body(
-            _live_weather(self.city_name, data),
-            _alarm_section(alarms),
-        )
+        text = _notify_body(_alarm_section(alarms))
         await async_send_notify(
             self.hass,
             self.entry_opts,
@@ -379,10 +376,7 @@ class WeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._last_rain_sig = sig
         self._last_rain_rank = rank
         self._last_rain_at = now
-        text = _notify_body(
-            _live_weather(self.city_name, data),
-            _rain_section(data, payload),
-        )
+        text = _notify_body(_rain_section(data, payload))
         await async_send_notify(
             self.hass,
             self.entry_opts,

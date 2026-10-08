@@ -9,6 +9,9 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .account import XiaomiAccount, XiaomiDevice, apply_suggested_entity_id
 from .const import DOMAIN, INTEGRATION_HUB_SUFFIX
+from .entity import XiaomiAccountEntity
+
+PARALLEL_UPDATES = 1
 
 _DEVICE_BUTTONS = (
     ("play_sound", "play_sound", "mdi:volume-high"),
@@ -20,7 +23,7 @@ _DEVICE_BUTTONS = (
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    account: XiaomiAccount = hass.data[DOMAIN][entry.unique_id]
+    account: XiaomiAccount = entry.runtime_data
     tracked: set[str] = set()
     hub_id = f"{entry.unique_id or account.username}{INTEGRATION_HUB_SUFFIX}"
 
@@ -57,7 +60,7 @@ def add_entities(
         async_add_entities(new_tracked, True)
 
 
-class XiaomiHubUpdateButton(ButtonEntity):
+class XiaomiHubUpdateButton(XiaomiAccountEntity, ButtonEntity):
     _attr_has_entity_name = True
     _attr_should_poll = False
     _attr_translation_key = "update"
@@ -72,7 +75,7 @@ class XiaomiHubUpdateButton(ButtonEntity):
         await self._account.async_keep_alive(force_locate=True)
 
 
-class XiaomiDeviceButton(ButtonEntity):
+class XiaomiDeviceButton(XiaomiAccountEntity, ButtonEntity):
     _attr_has_entity_name = True
     _attr_should_poll = False
 

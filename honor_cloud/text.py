@@ -11,8 +11,9 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import DOMAIN, PARALLEL_UPDATES
 from .coordinator import SyncCoordinator
+from .runtime_data import get_runtime
 from .device_tracker import _get_stable_device_id
 
 _LOGGER = logging.getLogger(__name__)
@@ -25,7 +26,10 @@ _DEVICE_TEXTS = (
 
 
 def get_lost_fields(hass: HomeAssistant, entry_id: str, device_id: str) -> dict[str, str]:
-    store = hass.data[DOMAIN][entry_id].setdefault("lost_fields", {})
+    entry = hass.config_entries.async_get_entry(entry_id)
+    if entry is None or entry.runtime_data is None:
+        return {"lost_password": "", "lost_message": "", "lost_number": ""}
+    store = get_runtime(entry).lost_fields
     return store.setdefault(
         device_id,
         {"lost_password": "", "lost_message": "", "lost_number": ""},
@@ -84,10 +88,8 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    coordinators = hass.data[DOMAIN][entry.entry_id]
-    sync_coordinator: SyncCoordinator = coordinators["sync_coordinator"]
+    sync_coordinator: SyncCoordinator = get_runtime(entry).sync_coordinator
     known_ids: set[str] = set()
-    hass.data[DOMAIN][entry.entry_id].setdefault("lost_fields", {})
 
     entities = _create_text_entities(sync_coordinator, entry, known_ids)
     if entities:
@@ -103,6 +105,7 @@ async def async_setup_entry(
 
 class HonorLostText(CoordinatorEntity, RestoreEntity, TextEntity):
     _attr_has_entity_name = True
+    _attr_parallel_updates = PARALLEL_UPDATES
     _attr_native_min = 0
 
     def __init__(
@@ -129,11 +132,6 @@ class HonorLostText(CoordinatorEntity, RestoreEntity, TextEntity):
         self._attr_icon = icon
         self._attr_native_max = native_max
         self._attr_mode = mode
-        self._attr_name = {
-            "lost_password": "锁屏密码",
-            "lost_message": "丢失留言",
-            "lost_number": "联系电话",
-        }.get(field, field)
 
     @property
     def device_info(self) -> DeviceInfo:

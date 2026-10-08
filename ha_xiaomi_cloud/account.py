@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import math
+import random
 import re
 from math import atan2, cos, sin, sqrt
 from typing import Any
@@ -33,17 +34,40 @@ from .const import (
     CONF_COMMUTE_ENABLED,
     CONF_COMMUTE_ZONES,
     CONF_ACTIVITY_ENTITY,
+    CONF_COMPANY_ZONES,
     CONF_MAX_INTERVAL,
+    CONF_OFFPEAK_ENABLED,
+    CONF_OFFPEAK_INTERVAL,
+    CONF_OFFPEAK_WINDOWS,
+    CONF_PEAK_ENABLED,
+    CONF_PEAK_INTERVAL,
+    CONF_PEAK_WINDOWS,
+    CONF_PERIOD_WEEKDAYS,
     CONF_UPDATE_INTERVAL,
     DEFAULT_ACTIVITY_ENTITY,
     DEFAULT_AMAP_ENABLED,
     DEFAULT_COMMUTE_ENABLED,
     DEFAULT_COMMUTE_ZONES,
+    DEFAULT_COMPANY_ZONES,
     DEFAULT_MAX_INTERVAL,
+    DEFAULT_OFFPEAK_ENABLED,
+    DEFAULT_OFFPEAK_INTERVAL,
+    DEFAULT_OFFPEAK_WINDOWS,
+    DEFAULT_PEAK_ENABLED,
+    DEFAULT_PEAK_INTERVAL,
+    DEFAULT_PEAK_WINDOWS,
+    DEFAULT_PERIOD_WEEKDAYS,
     DOMAIN,
     HOME_EXIT_BUFFER_M,
+    HOME_UPDATE_INTERVAL_MAX,
+    HOME_UPDATE_INTERVAL_MIN,
+    LOW_BATTERY_INTERVAL,
+    LOW_BATTERY_THRESHOLD,
     activity_entities,
     default_options,
+    in_windows,
+    opt_windows_text,
+    parse_windows,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -295,9 +319,22 @@ class XiaomiAccount:
         self._locate_count = 0
         self._amap_count = 0
         self._usage_day: str | None = None
+        self._peak_enabled = DEFAULT_PEAK_ENABLED
+        self._peak_windows: list[tuple[int, int]] = []
+        self._offpeak_enabled = DEFAULT_OFFPEAK_ENABLED
+        self._offpeak_windows: list[tuple[int, int]] = []
+        self._peak_interval = DEFAULT_PEAK_INTERVAL
+        self._offpeak_interval = DEFAULT_OFFPEAK_INTERVAL
+        self._period_weekdays = DEFAULT_PERIOD_WEEKDAYS
         self._max_interval = DEFAULT_MAX_INTERVAL
-        self._load_interval_options()
-        coordinator.async_add_listener(self._handle_coordinator_update)
+        self._home_locate_mode = False
+        self._logged_available: bool | None = None
+        self._logged_reachable: bool | None = None
+        self._coordinator_unsub: CALLBACK_TYPE | None = None
+        self._load_period_options()
+        self._coordinator_unsub = coordinator.async_add_listener(
+            self._handle_coordinator_update
+        )
 
     @property
     def username(self) -> str:
@@ -331,6 +368,22 @@ class XiaomiAccount:
         return float(self._coordinator._scan_interval)
 
     @property
+    def available(self) -> bool:
+        return self._coordinator.last_update_success
+
+    def _ensure_operational(self) -> None:
+        if not self._coordinator.last_update_success:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="update_failed",
+            )
+        if not self._coordinator.cloud_reachable:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="connection_failed",
+            )
+
+    @property
     def signal_device_new(self) -> str:
         return f"{DOMAIN}-{self._username}-device-new"
 
@@ -352,9 +405,38 @@ class XiaomiAccount:
             self._amap_key()
         )
 
-    def _load_interval_options(self) -> None:
+    def _load_period_options(self) -> None:
         self._max_interval = int(
             self._opt(CONF_MAX_INTERVAL, self._opt(CONF_UPDATE_INTERVAL, DEFAULT_MAX_INTERVAL))
+        )
+        self._peak_enabled = bool(self._opt(CONF_PEAK_ENABLED, DEFAULT_PEAK_ENABLED))
+        self._offpeak_enabled = bool(
+            self._opt(CONF_OFFPEAK_ENABLED, DEFAULT_OFFPEAK_ENABLED)
+        )
+        self._peak_windows = (
+            parse_windows(
+                opt_windows_text(
+                    self._opt(CONF_PEAK_WINDOWS, DEFAULT_PEAK_WINDOWS),
+                    DEFAULT_PEAK_WINDOWS,
+                )
+            )
+            or []
+        )
+        self._offpeak_windows = (
+            parse_windows(
+                opt_windows_text(
+                    self._opt(CONF_OFFPEAK_WINDOWS, DEFAULT_OFFPEAK_WINDOWS),
+                    DEFAULT_OFFPEAK_WINDOWS,
+                )
+            )
+            or []
+        )
+        self._peak_interval = int(self._opt(CONF_PEAK_INTERVAL, DEFAULT_PEAK_INTERVAL))
+        self._offpeak_interval = int(
+            self._opt(CONF_OFFPEAK_INTERVAL, DEFAULT_OFFPEAK_INTERVAL)
+        )
+        self._period_weekdays = bool(
+            self._opt(CONF_PERIOD_WEEKDAYS, DEFAULT_PERIOD_WEEKDAYS)
         )
 
     def _roll_usage_day(self) -> None:
@@ -374,12 +456,87 @@ class XiaomiAccount:
         if amap is not None:
             self._amap_count = amap
 
+    def _coords_in_zones(
+        self,
+        lat: float,
+        lon: float,
+        zones: list[tuple[str, str, float, float, float]],
+        expanded: bool,
+    ) -> bool:
+        extra = HOME_EXIT_BUFFER_M if expanded else 0
+        for zone in zones:
+            zone_lon, zone_lat = wgs84_to_gcj02(zone[3], zone[2])
+            if _haversine_m(lat, lon, zone_lat, zone_lon) <= zone[4] + extra:
+                return True
+        return False
+
+    def _all_devices_home_or_company(self) -> bool:
+        zones = self._home_zones() + self._company_zones()
+        devices = list(self._devices.values())
+        if not zones or not devices:
+            return False
+        expanded = self._home_locate_mode
+        for device in devices:
+            lat = device.latitude
+            lon = device.longitude
+            if lat is None or lon is None:
+                return False
+            if not self._coords_in_zones(lat, lon, zones, expanded):
+                return False
+        return True
+
+    def _device_at_home_or_company(self, device: XiaomiDevice) -> bool:
+        entity_ids = [
+            entity_id
+            for entity_id in activity_entities(
+                self._opt(CONF_ACTIVITY_ENTITY, DEFAULT_ACTIVITY_ENTITY)
+            )
+            if self.hass.states.get(entity_id) is not None
+        ]
+        if self._activity_mode(device, entity_ids) == COMMUTE_MODE_BICYCLING:
+            return True
+        lat = device.latitude
+        lon = device.longitude
+        zones = self._home_zones() + self._company_zones()
+        if lat is None or lon is None or not zones:
+            return False
+        return self._coords_in_zones(lat, lon, zones, expanded=False)
+
+    def _weekday_periods(self, weekday: int) -> bool:
+        return not self._period_weekdays or weekday < 5
+
     def _period_interval(self) -> int:
+        if self._all_devices_home_or_company():
+            self._home_locate_mode = True
+            interval = random.randint(HOME_UPDATE_INTERVAL_MIN, HOME_UPDATE_INTERVAL_MAX)
+            _LOGGER.info("全部设备在家/公司区域，下次定位间隔随机为 %s 分钟", interval)
+            return interval
+        self._home_locate_mode = False
+        now = dt_now()
+        now_min = now.hour * 60 + now.minute
+        if not self._weekday_periods(now.weekday()):
+            return self._max_interval
+        if self._peak_enabled and in_windows(now_min, self._peak_windows):
+            return self._peak_interval
+        if self._offpeak_enabled and in_windows(now_min, self._offpeak_windows):
+            return self._offpeak_interval
         return self._max_interval
 
+    def _apply_low_battery_slowdown(self, interval: int) -> int:
+        if self._home_locate_mode:
+            return interval
+        for device in self._devices.values():
+            battery = device.battery_level
+            if battery is None or battery >= LOW_BATTERY_THRESHOLD:
+                continue
+            if self._device_at_home_or_company(device):
+                continue
+            return LOW_BATTERY_INTERVAL
+        return interval
+
     async def _apply_fetch_interval(self, devices_data: list[dict] | None = None) -> None:
-        self._load_interval_options()
-        interval = self._period_interval()
+        self._load_period_options()
+        interval = self._apply_low_battery_slowdown(self._period_interval())
         coordinator_interval = int(self._coordinator._scan_interval)
         if coordinator_interval != interval:
             await self._coordinator._update_interval_changed(interval)
@@ -387,25 +544,65 @@ class XiaomiAccount:
     async def async_setup(self) -> None:
         await self._coordinator.async_refresh()
         data = self._coordinator.data if isinstance(self._coordinator.data, list) else []
-        await self._apply_fetch_interval(data)
         self._sync_devices()
+        await self._apply_fetch_interval(data)
 
     async def async_keep_alive(self, force_locate: bool = False) -> None:
         await self._coordinator.async_refresh()
+        self._ensure_operational()
 
     def reload_options(self) -> None:
-        self._load_interval_options()
+        self._load_period_options()
         data = self._coordinator.data if isinstance(self._coordinator.data, list) else []
         self.hass.async_create_task(self._apply_fetch_interval(data))
 
     @callback
     def _handle_coordinator_update(self) -> None:
+        available = self.available
+        if self._logged_available is None:
+            self._logged_available = available
+        elif available != self._logged_available:
+            if available:
+                _LOGGER.info(
+                    "Xiaomi Cloud account %s is available again", self._username
+                )
+            else:
+                _LOGGER.warning(
+                    "Xiaomi Cloud account %s is unavailable", self._username
+                )
+            self._logged_available = available
+            dispatcher_send(self.hass, self.signal_device_update)
+
+        reachable = self._coordinator.cloud_reachable
+        if self._logged_reachable is None:
+            self._logged_reachable = reachable
+        elif reachable != self._logged_reachable:
+            if reachable:
+                _LOGGER.info(
+                    "Xiaomi Cloud account %s cloud API reachable again",
+                    self._username,
+                )
+            else:
+                _LOGGER.warning(
+                    "Xiaomi Cloud account %s using cached data (API unreachable)",
+                    self._username,
+                )
+            self._logged_reachable = reachable
         if self._coordinator.last_update_success:
             self._roll_usage_day()
             self._locate_count += 1
         data = self._coordinator.data if isinstance(self._coordinator.data, list) else []
-        self.hass.async_create_task(self._apply_fetch_interval(data))
         self._sync_devices()
+        self.hass.async_create_task(self._apply_fetch_interval(data))
+
+    async def async_shutdown(self) -> None:
+        if self._coordinator_unsub is not None:
+            self._coordinator_unsub()
+            self._coordinator_unsub = None
+        for unsub in self.listeners:
+            unsub()
+        self.listeners.clear()
+        await self._coordinator.async_shutdown()
 
     async def _post_sync_update(self) -> None:
         dispatcher_send(self.hass, self.signal_device_update)
@@ -465,9 +662,11 @@ class XiaomiAccount:
             self._amap_count += 1
 
     @callback
-    def _home_zones(self) -> list[tuple[str, str, float, float, float]]:
+    def _zones_from_opt(
+        self, key: str, default: list[str]
+    ) -> list[tuple[str, str, float, float, float]]:
         result: list[tuple[str, str, float, float, float]] = []
-        zone_ids = self._opt(CONF_COMMUTE_ZONES, DEFAULT_COMMUTE_ZONES)
+        zone_ids = self._opt(key, default)
         if isinstance(zone_ids, str):
             zone_ids = [zone_ids] if zone_ids else []
         elif not isinstance(zone_ids, list):
@@ -487,6 +686,14 @@ class XiaomiAccount:
             name = state.attributes.get("friendly_name") or entity_id
             result.append((entity_id, str(name), float(lat), float(lon), radius))
         return result
+
+    @callback
+    def _home_zones(self) -> list[tuple[str, str, float, float, float]]:
+        return self._zones_from_opt(CONF_COMMUTE_ZONES, DEFAULT_COMMUTE_ZONES)
+
+    @callback
+    def _company_zones(self) -> list[tuple[str, str, float, float, float]]:
+        return self._zones_from_opt(CONF_COMPANY_ZONES, DEFAULT_COMPANY_ZONES)
 
     def _device_activity_tokens(self, device: XiaomiDevice) -> set[str]:
         tokens = _identity_tokens(device.name) | _identity_tokens(device.model)
@@ -581,20 +788,30 @@ class XiaomiAccount:
                 except Exception as err:
                     _LOGGER.debug("Commute update failed for %s: %s", device.name, err)
 
+    async def _invoke_service(self, payload: dict[str, Any]) -> None:
+        self._coordinator.last_service_ok = None
+        await self._coordinator._send_command(payload)
+        self._ensure_operational()
+        if self._coordinator.last_service_ok is False:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="service_failed",
+            )
+
     async def async_play_sound(self, imei: str) -> None:
-        await self._coordinator._send_command(
+        await self._invoke_service(
             {"service": "noise", "data": {"imei": imei}}
         )
 
     async def async_find_device(self, imei: str) -> None:
-        await self._coordinator._send_command(
+        await self._invoke_service(
             {"service": "find", "data": {"imei": imei}}
         )
 
     async def async_lost_device(
         self, imei: str, phone: str, content: str, onlinenotify: bool = True
     ) -> None:
-        await self._coordinator._send_command(
+        await self._invoke_service(
             {
                 "service": "lost",
                 "data": {
@@ -607,7 +824,12 @@ class XiaomiAccount:
         )
 
     async def async_send_clipboard(self, text: str) -> None:
-        await self._coordinator._send_command(
+        if not str(text or "").strip():
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="clipboard_empty",
+            )
+        await self._invoke_service(
             {"service": "clipboard", "data": {"text": text}}
         )
 
@@ -649,16 +871,17 @@ class XiaomiDevice:
         prev_lat = self._last_lat
         prev_lon = self._last_lon
         merged = dict(data)
-        if merged.get("device_lat") is None and self._data.get("device_lat") is not None:
-            for key in (
-                "device_lat",
-                "device_lon",
-                "device_accuracy",
-                "device_location_update_time",
-                "coordinate_type",
-            ):
-                if merged.get(key) is None and self._data.get(key) is not None:
-                    merged[key] = self._data[key]
+        for key in (
+            "device_lat",
+            "device_lon",
+            "device_accuracy",
+            "device_location_update_time",
+            "coordinate_type",
+            "device_power",
+            "last_poll_time",
+        ):
+            if merged.get(key) is None and self._data.get(key) is not None:
+                merged[key] = self._data[key]
         lat = merged.get("device_lat")
         lon = merged.get("device_lon")
         self._data = merged
@@ -771,10 +994,17 @@ class XiaomiDevice:
         return str(phone) if phone else None
 
     @property
+    def last_poll_time(self) -> str | None:
+        value = self._data.get("last_poll_time")
+        return str(value) if value else None
+
+    @property
     def extra_state_attributes(self) -> dict[str, Any]:
         attrs: dict[str, Any] = {"imei": self.imei}
         if self.location_update_time:
             attrs["last_update"] = self.location_update_time
+        if self.last_poll_time:
+            attrs["last_poll"] = self.last_poll_time
         attrs["coordinate_type"] = self.coordinate_type
         if self.device_phone:
             attrs["device_phone"] = self.device_phone

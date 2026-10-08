@@ -8,6 +8,25 @@
           "service_base_url": "Playwright Service URL",
           "username": "Honor Account",
           "password": "Honor Password"
+        },
+        "data_description": {
+          "service_base_url": "Base URL of the Playwright backend (http/https).",
+          "username": "Honor cloud account used by the backend to log in.",
+          "password": "Password for the Honor cloud account."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate Honor Cloud",
+        "description": "Session expired or login failed for account {username}. Enter credentials again. If a captcha is required, complete it at your backend /auth/ensure after saving.",
+        "data": {
+          "service_base_url": "Playwright Service URL",
+          "username": "Honor Account",
+          "password": "Honor Password"
+        },
+        "data_description": {
+          "service_base_url": "Base URL of the Playwright backend (http/https).",
+          "username": "Honor cloud account used by the backend to log in.",
+          "password": "Password for the Honor cloud account."
         }
       }
     },
@@ -21,7 +40,9 @@
       "unknown": "Unknown error"
     },
     "abort": {
-      "already_configured": "This Honor Cloud service is already configured."
+      "already_configured": "This Honor Cloud service is already configured.",
+      "reauth_successful": "Re-authentication was successful.",
+      "entry_not_found": "Configuration entry no longer exists."
     }
   },
   "options": {
@@ -37,8 +58,22 @@
       "locate": {
         "title": "Locate settings",
         "data": {
-          "interval": "Location update interval (minutes)",
-          "use_page_location": "Enable active positioning"
+          "max_interval": "Normal update interval (minutes)",
+          "period_weekdays": "Peak/off-peak on weekdays only",
+          "peak_enabled": "Enable peak hours",
+          "peak_start_1": "Peak 1 start",
+          "peak_end_1": "Peak 1 end",
+          "peak_start_2": "Peak 2 start",
+          "peak_end_2": "Peak 2 end",
+          "peak_start_3": "Peak 3 start",
+          "peak_end_3": "Peak 3 end",
+          "peak_interval": "Peak update interval (minutes)",
+          "offpeak_enabled": "Enable off-peak hours",
+          "offpeak_start_1": "Off-peak 1 start",
+          "offpeak_end_1": "Off-peak 1 end",
+          "offpeak_start_2": "Off-peak 2 start",
+          "offpeak_end_2": "Off-peak 2 end",
+          "offpeak_interval": "Off-peak update interval (minutes)"
         }
       },
       "amap": {
@@ -49,6 +84,7 @@
           "enable_amap": "Enable Amap calls",
           "commute_enabled": "Enable commute",
           "commute_zones": "Home zones",
+          "company_zones": "Company zones",
           "activity_entity": "Activity status"
         },
         "data_description": {
@@ -66,6 +102,7 @@
       }
     },
     "error": {
+      "invalid_windows": "Select both start and end time",
       "amap_required": "Enable Amap calls before commute",
       "commute_key": "Enter Amap key",
       "commute_zones": "Select at least one home zone"
@@ -82,14 +119,20 @@
       "amap_count": {
         "name": "Daily Amap calls"
       },
-      "honor_devices_count": {
-        "name": "Honor Device Count"
+      "address": {
+        "name": "Address",
+        "state": {
+          "initializing": "Initializing",
+          "offline": "Offline",
+          "no_coordinates": "Coordinates unavailable",
+          "no_address": "No address"
+        }
       },
-      "honor_session_expires_in": {
-        "name": "Honor Session Remaining Time"
+      "update_time": {
+        "name": "Last update"
       },
-      "honor_device_battery": {
-        "name": "Honor Device Battery"
+      "battery": {
+        "name": "Battery"
       },
       "commute_distance": {
         "name": "Commute distance"
@@ -107,20 +150,29 @@
           "offline": "Offline",
           "unknown": "Unknown"
         }
+      },
+      "service_status": {
+        "name": "Service status",
+        "state": {
+          "initializing": "Initializing",
+          "waiting_login": "Waiting for login",
+          "logging_in": "Logging in",
+          "auth_required": "Authentication required",
+          "auth_expired": "Authentication expired",
+          "ok": "OK",
+          "error": "Error"
+        }
       }
     },
     "button": {
       "update": {
         "name": "Update"
       },
-      "honor_force_login": {
-        "name": "Honor Force Login"
-      },
-      "honor_sync_now": {
-        "name": "Honor Sync Now"
+      "ring": {
+        "name": "Ring"
       },
       "lost_device": {
-        "name": "Lost Mode"
+        "name": "Lost mode"
       }
     },
     "text": {
@@ -137,15 +189,31 @@
   },
   "services": {
     "force_sync": {
-      "name": "Force Sync",
-      "description": "Immediately trigger a device location sync, ignoring the polling interval."
+      "name": "Force sync",
+      "description": "Immediately trigger a device location sync, ignoring the polling interval.",
+      "fields": {
+        "mode": {
+          "name": "Sync mode",
+          "description": "normal: cached location; active: real-time locate (60s rate limit).",
+          "selector": {
+            "options": {
+              "normal": "Normal (cached location)",
+              "active": "Active (real-time locate)"
+            }
+          }
+        }
+      }
+    },
+    "force_locate": {
+      "name": "Force locate",
+      "description": "Trigger full active locate for all devices and refresh entities."
     },
     "ring": {
       "name": "Ring",
       "description": "Trigger device ring"
     },
     "lost": {
-      "name": "Lost Mode",
+      "name": "Lost mode",
       "description": "Enable or disable lost mode"
     }
   }

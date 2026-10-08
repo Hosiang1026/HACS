@@ -16,10 +16,18 @@
         "data": {
           "verify_code": "Verification code"
         }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate",
+        "description": "Your Xiaomi Cloud session expired. Enter the password for {username}.",
+        "data": {
+          "password": "Password"
+        }
       }
     },
     "abort": {
-      "already_configured": "Account already configured"
+      "already_configured": "Account already configured",
+      "reauth_successful": "Re-authentication was successful"
     },
     "error": {
       "invalid_auth": "Invalid username or password",
@@ -40,7 +48,22 @@
       "locate": {
         "title": "Locate settings",
         "data": {
-          "max_interval": "Update interval (minutes)"
+          "max_interval": "Normal update interval (minutes)",
+          "period_weekdays": "Peak/off-peak on weekdays only (Mon–Fri)",
+          "peak_enabled": "Enable peak updates",
+          "peak_start_1": "Peak 1 start",
+          "peak_end_1": "Peak 1 end",
+          "peak_start_2": "Peak 2 start",
+          "peak_end_2": "Peak 2 end",
+          "peak_start_3": "Peak 3 start",
+          "peak_end_3": "Peak 3 end",
+          "peak_interval": "Peak update interval (minutes)",
+          "offpeak_enabled": "Enable off-peak updates",
+          "offpeak_start_1": "Off-peak 1 start",
+          "offpeak_end_1": "Off-peak 1 end",
+          "offpeak_start_2": "Off-peak 2 start",
+          "offpeak_end_2": "Off-peak 2 end",
+          "offpeak_interval": "Off-peak update interval (minutes)"
         }
       },
       "amap": {
@@ -49,6 +72,7 @@
           "amap_enabled": "Enable Amap calls",
           "commute_enabled": "Enable commute",
           "commute_zones": "Home zones",
+          "company_zones": "Company zones",
           "activity_entity": "Activity status",
           "amap_key": "Amap key"
         },
@@ -58,6 +82,7 @@
       }
     },
     "error": {
+      "invalid_windows": "Select start and end time",
       "amap_required": "Enable Amap calls before commute",
       "commute_key": "Enter Amap key",
       "commute_zones": "Select at least one home zone"
@@ -188,6 +213,15 @@
     "account_not_found": { "message": "Account {account} not found" },
     "device_required": { "message": "Specify device imei or device_name" },
     "lost_number_required": { "message": "Please enter the contact number" },
-    "lost_message_required": { "message": "Please enter the lost message" }
+    "lost_message_required": { "message": "Please enter the lost message" },
+    "authentication_required": {
+      "message": "Authentication failed; reauthenticate the integration"
+    },
+    "service_failed": { "message": "Xiaomi Cloud command failed" },
+    "clipboard_empty": { "message": "Clipboard text is empty" },
+    "update_failed": { "message": "Failed to refresh Xiaomi Cloud data" },
+    "connection_failed": {
+      "message": "Cannot reach Xiaomi Cloud; cached data may be stale"
+    }
   }
 }

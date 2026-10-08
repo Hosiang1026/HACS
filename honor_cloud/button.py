@@ -13,8 +13,9 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_BASE_URL, CONF_SESSION_KEY, CONF_API_KEY, DOMAIN
+from .const import CONF_BASE_URL, CONF_SESSION_KEY, CONF_API_KEY, DOMAIN, PARALLEL_UPDATES
 from .coordinator import SyncCoordinator
+from .runtime_data import get_runtime
 from .device_tracker import _get_stable_device_id
 from .text import get_lost_fields
 
@@ -78,8 +79,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    coordinators = hass.data[DOMAIN][entry.entry_id]
-    sync_coordinator: SyncCoordinator = coordinators["sync_coordinator"]
+    sync_coordinator: SyncCoordinator = get_runtime(entry).sync_coordinator
     known_ids: set[str] = set()
 
     async_add_entities([HonorHubUpdateButton(sync_coordinator, entry)])
@@ -110,6 +110,7 @@ async def async_setup_entry(
 
 class HonorHubUpdateButton(CoordinatorEntity, ButtonEntity):
     _attr_has_entity_name = True
+    _attr_parallel_updates = PARALLEL_UPDATES
     _attr_translation_key = "update"
     _attr_icon = "mdi:crosshairs-gps"
 
@@ -132,8 +133,9 @@ class HonorHubUpdateButton(CoordinatorEntity, ButtonEntity):
 class HonorRingButton(CoordinatorEntity, ButtonEntity):
 
     _attr_has_entity_name = True
+    _attr_parallel_updates = PARALLEL_UPDATES
     _attr_icon = "mdi:bell-ring"
-    _attr_name = "响铃"
+    _attr_translation_key = "ring"
 
     def __init__(
         self,
@@ -163,17 +165,11 @@ class HonorRingButton(CoordinatorEntity, ButtonEntity):
 
     @property
     def available(self) -> bool:
-        if not self.coordinator.data:
-            return False
-        code = self.coordinator.data.get("code", -1)
-        reason = self.coordinator.data.get("reason", "")
-        if code == 990 or reason in ["LOGIN_IN_PROGRESS", "NO_SESSION"]:
-            return False
-        if self.coordinator.data.get("need_reauth"):
-            return False
         if time.time() - self._last_pressed < _RING_COOLDOWN_SEC:
             return False
-        return True
+        return self.coordinator.data is not None or bool(
+            getattr(self.coordinator, "_last_known_devices", None)
+        )
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -241,8 +237,9 @@ class HonorRingButton(CoordinatorEntity, ButtonEntity):
 class HonorLostButton(CoordinatorEntity, ButtonEntity):
 
     _attr_has_entity_name = True
+    _attr_parallel_updates = PARALLEL_UPDATES
     _attr_icon = "mdi:cellphone-lock"
-    _attr_name = "丢失模式"
+    _attr_translation_key = "lost_device"
 
     def __init__(
         self,
@@ -271,17 +268,11 @@ class HonorLostButton(CoordinatorEntity, ButtonEntity):
 
     @property
     def available(self) -> bool:
-        if not self.coordinator.data:
-            return False
-        code = self.coordinator.data.get("code", -1)
-        reason = self.coordinator.data.get("reason", "")
-        if code == 990 or reason in ["LOGIN_IN_PROGRESS", "NO_SESSION"]:
-            return False
-        if self.coordinator.data.get("need_reauth"):
-            return False
         if time.time() - self._last_pressed < _LOST_COOLDOWN_SEC:
             return False
-        return True
+        return self.coordinator.data is not None or bool(
+            getattr(self.coordinator, "_last_known_devices", None)
+        )
 
     async def async_press(self) -> None:
         fields = get_lost_fields(self.hass, self._entry.entry_id, self._device_id)

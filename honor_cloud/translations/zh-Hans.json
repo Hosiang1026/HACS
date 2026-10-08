@@ -8,6 +8,25 @@
           "service_base_url": "Playwright服务地址",
           "username": "荣耀账号",
           "password": "荣耀密码"
+        },
+        "data_description": {
+          "service_base_url": "Playwright 后端地址，以 http:// 或 https:// 开头。",
+          "username": "供后端登录荣耀云的账号。",
+          "password": "荣耀云账号密码。"
+        }
+      },
+      "reauth_confirm": {
+        "title": "重新认证荣耀云服务",
+        "description": "账号 {username} 的会话已失效或登录失败，请重新填写凭据。若需验证码，保存后请在后端 /auth/ensure 页面完成验证。",
+        "data": {
+          "service_base_url": "Playwright服务地址",
+          "username": "荣耀账号",
+          "password": "荣耀密码"
+        },
+        "data_description": {
+          "service_base_url": "Playwright 后端地址，以 http:// 或 https:// 开头。",
+          "username": "供后端登录荣耀云的账号。",
+          "password": "荣耀云账号密码。"
         }
       }
     },
@@ -21,7 +40,9 @@
       "unknown": "未知错误"
     },
     "abort": {
-      "already_configured": "此荣耀云服务已配置"
+      "already_configured": "此荣耀云服务已配置",
+      "reauth_successful": "重新认证成功",
+      "entry_not_found": "配置条目已不存在"
     }
   },
   "options": {
@@ -37,8 +58,22 @@
       "locate": {
         "title": "定位设置",
         "data": {
-          "interval": "位置更新间隔(分钟)",
-          "use_page_location": "启用主动定位（触发荣耀云实时定位）"
+          "max_interval": "平时刷新间隔（分钟）",
+          "period_weekdays": "高峰/低谷仅工作日（周一至周五）",
+          "peak_enabled": "启用高峰时段",
+          "peak_start_1": "高峰1 开始",
+          "peak_end_1": "高峰1 结束",
+          "peak_start_2": "高峰2 开始",
+          "peak_end_2": "高峰2 结束",
+          "peak_start_3": "高峰3 开始",
+          "peak_end_3": "高峰3 结束",
+          "peak_interval": "高峰刷新间隔（分钟）",
+          "offpeak_enabled": "启用低谷时段",
+          "offpeak_start_1": "低谷1 开始",
+          "offpeak_end_1": "低谷1 结束",
+          "offpeak_start_2": "低谷2 开始",
+          "offpeak_end_2": "低谷2 结束",
+          "offpeak_interval": "低谷刷新间隔（分钟）"
         }
       },
       "amap": {
@@ -49,6 +84,7 @@
           "enable_amap": "启用高德调用",
           "commute_enabled": "是否启用通勤",
           "commute_zones": "家区域",
+          "company_zones": "公司区域",
           "activity_entity": "活动状态"
         },
         "data_description": {
@@ -66,6 +102,7 @@
       }
     },
     "error": {
+      "invalid_windows": "请选择开始和结束时间",
       "amap_required": "启用通勤需先开启高德调用",
       "commute_key": "请填写高德 Key",
       "commute_zones": "请选择至少一个家区域"
@@ -82,14 +119,20 @@
       "amap_count": {
         "name": "每日高德调用次数"
       },
-      "honor_devices_count": {
-        "name": "荣耀设备数量"
+      "address": {
+        "name": "地址",
+        "state": {
+          "initializing": "初始化中",
+          "offline": "设备离线",
+          "no_coordinates": "坐标不可用",
+          "no_address": "暂无地址"
+        }
       },
-      "honor_session_expires_in": {
-        "name": "荣耀会话剩余时间"
+      "update_time": {
+        "name": "更新时间"
       },
-      "honor_device_battery": {
-        "name": "荣耀设备电量"
+      "battery": {
+        "name": "电量"
       },
       "commute_distance": {
         "name": "通勤距离"
@@ -107,17 +150,26 @@
           "offline": "离线",
           "unknown": "未知"
         }
+      },
+      "service_status": {
+        "name": "服务状态",
+        "state": {
+          "initializing": "初始化中",
+          "waiting_login": "等待登录",
+          "logging_in": "登录中",
+          "auth_required": "需要认证",
+          "auth_expired": "认证过期",
+          "ok": "正常",
+          "error": "异常"
+        }
       }
     },
     "button": {
       "update": {
         "name": "更新"
       },
-      "honor_force_login": {
-        "name": "荣耀强制登录"
-      },
-      "honor_sync_now": {
-        "name": "荣耀立即同步"
+      "ring": {
+        "name": "响铃"
       },
       "lost_device": {
         "name": "丢失模式"
@@ -138,7 +190,23 @@
   "services": {
     "force_sync": {
       "name": "强制同步",
-      "description": "立即触发一次设备位置同步，忽略轮询间隔"
+      "description": "立即触发一次设备位置同步，忽略轮询间隔",
+      "fields": {
+        "mode": {
+          "name": "同步模式",
+          "description": "normal：缓存定位；active：实时定位（约 60 秒限频）",
+          "selector": {
+            "options": {
+              "normal": "普通模式（缓存定位）",
+              "active": "主动模式（实时定位）"
+            }
+          }
+        }
+      }
+    },
+    "force_locate": {
+      "name": "主动获取实时位置",
+      "description": "触发完整主动定位并刷新全部实体"
     },
     "ring": {
       "name": "响铃",

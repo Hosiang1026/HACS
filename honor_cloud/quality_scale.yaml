@@ -1,0 +1,5 @@
+quality_scale: silver
+rules:
+  brands:
+    status: exempt
+    reason: HACS custom integration; no core brands folder.

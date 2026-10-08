@@ -37,6 +37,7 @@ from .const import (
     CONF_AMAP_KEY,
     CONF_COMMUTE_ENABLED,
     CONF_COMMUTE_ZONES,
+    CONF_COMPANY_ZONES,
     CONF_MAX_INTERVAL,
     CONF_OFFPEAK_ENABLED,
     CONF_OFFPEAK_INTERVAL,
@@ -49,6 +50,7 @@ from .const import (
     DEFAULT_ACTIVITY_ENTITY,
     DEFAULT_COMMUTE_ENABLED,
     DEFAULT_COMMUTE_ZONES,
+    DEFAULT_COMPANY_ZONES,
     DEFAULT_MAX_INTERVAL,
     DEFAULT_OFFPEAK_ENABLED,
     DEFAULT_OFFPEAK_INTERVAL,
@@ -797,24 +799,67 @@ class IcloudOptionsFlowHandler(config_entries.OptionsFlow):
             user_input[CONF_COMMUTE_ENABLED] = bool(
                 user_input.get(CONF_COMMUTE_ENABLED, False)
             )
+            saved_zones = self._opt(CONF_COMMUTE_ZONES, DEFAULT_COMMUTE_ZONES, None)
+            if isinstance(saved_zones, str):
+                saved_zones = [saved_zones] if saved_zones else []
+            elif not isinstance(saved_zones, list):
+                saved_zones = []
             zones = user_input.get(CONF_COMMUTE_ZONES) or []
             if isinstance(zones, str):
                 zones = [zones]
-            user_input[CONF_COMMUTE_ZONES] = [
+            elif not isinstance(zones, list):
+                zones = []
+            validated_zones = [
                 zone
                 for zone in zones
                 if str(zone or "").strip() and self.hass.states.get(zone) is not None
             ]
+            if validated_zones:
+                user_input[CONF_COMMUTE_ZONES] = validated_zones
+            elif not zones:
+                user_input[CONF_COMMUTE_ZONES] = []
+            else:
+                user_input[CONF_COMMUTE_ZONES] = saved_zones
+            saved_company = self._opt(CONF_COMPANY_ZONES, DEFAULT_COMPANY_ZONES, None)
+            if isinstance(saved_company, str):
+                saved_company = [saved_company] if saved_company else []
+            elif not isinstance(saved_company, list):
+                saved_company = []
+            company_zones = user_input.get(CONF_COMPANY_ZONES) or []
+            if isinstance(company_zones, str):
+                company_zones = [company_zones]
+            elif not isinstance(company_zones, list):
+                company_zones = []
+            validated_company = [
+                zone
+                for zone in company_zones
+                if str(zone or "").strip() and self.hass.states.get(zone) is not None
+            ]
+            if validated_company:
+                user_input[CONF_COMPANY_ZONES] = validated_company
+            elif not company_zones:
+                user_input[CONF_COMPANY_ZONES] = []
+            else:
+                user_input[CONF_COMPANY_ZONES] = saved_company
             submitted_key = str(user_input.get(CONF_AMAP_KEY) or "").strip()
             user_input[CONF_AMAP_KEY] = submitted_key or str(
                 entry.options.get(CONF_AMAP_KEY, entry.data.get(CONF_AMAP_KEY, ""))
                 or ""
             ).strip()
-            user_input[CONF_ACTIVITY_ENTITY] = [
+            saved_activity = activity_entities(
+                self._opt(CONF_ACTIVITY_ENTITY, DEFAULT_ACTIVITY_ENTITY, None)
+            )
+            submitted_activity = activity_entities(
+                user_input.get(CONF_ACTIVITY_ENTITY)
+            )
+            validated_activity = [
                 entity_id
-                for entity_id in activity_entities(user_input.get(CONF_ACTIVITY_ENTITY))
+                for entity_id in submitted_activity
                 if self.hass.states.get(entity_id) is not None
             ]
+            user_input[CONF_ACTIVITY_ENTITY] = (
+                validated_activity if validated_activity else saved_activity
+            )
             if user_input[CONF_COMMUTE_ENABLED]:
                 if not user_input[CONF_AMAP_KEY]:
                     errors[CONF_AMAP_KEY] = "commute_key"
@@ -831,6 +876,12 @@ class IcloudOptionsFlowHandler(config_entries.OptionsFlow):
         elif not isinstance(commute_zones, list):
             commute_zones = []
         commute_zones = [zone for zone in commute_zones if str(zone or "").strip()]
+        company_zones = self._opt(CONF_COMPANY_ZONES, DEFAULT_COMPANY_ZONES, user_input)
+        if isinstance(company_zones, str):
+            company_zones = [company_zones] if company_zones else []
+        elif not isinstance(company_zones, list):
+            company_zones = []
+        company_zones = [zone for zone in company_zones if str(zone or "").strip()]
         commute_on = bool(
             self._opt(CONF_COMMUTE_ENABLED, DEFAULT_COMMUTE_ENABLED, user_input)
         )
@@ -854,6 +905,12 @@ class IcloudOptionsFlowHandler(config_entries.OptionsFlow):
             zone_field(
                 CONF_COMMUTE_ZONES,
                 default=commute_zones,
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain="zone", multiple=True)
+            ),
+            vol.Optional(
+                CONF_COMPANY_ZONES,
+                default=company_zones,
             ): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain="zone", multiple=True)
             ),

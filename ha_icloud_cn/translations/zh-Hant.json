@@ -86,6 +86,7 @@
                 "data": {
                     "commute_enabled": "是否啟用",
                     "commute_zones": "家區域",
+                    "company_zones": "公司區域",
                     "activity_entity": "活動狀態",
                     "amap_key": "高德 Key"
                 },

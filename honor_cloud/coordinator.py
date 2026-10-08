@@ -2,33 +2,61 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import random
 import time
 from datetime import timedelta, datetime
 from typing import Any
 
 import aiohttp
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntry
+
+from .auth_helpers import flag_true, should_offer_reauth
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import aiohttp_client
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.components.persistent_notification import async_create
 
+from homeassistant.util.dt import now as dt_now
+
 from .const import (
+    COMMUTE_MODE_BICYCLING,
+    CONF_ACTIVITY_ENTITY,
     CONF_BASE_URL,
-    CONF_INTERVAL,
+    CONF_COMMUTE_ZONES,
+    CONF_COMPANY_ZONES,
+    CONF_OFFPEAK_ENABLED,
+    CONF_OFFPEAK_INTERVAL,
+    CONF_OFFPEAK_WINDOWS,
+    CONF_PEAK_ENABLED,
+    CONF_PEAK_INTERVAL,
+    CONF_PEAK_WINDOWS,
+    CONF_PERIOD_WEEKDAYS,
     CONF_SESSION_KEY,
-    CONF_USE_PAGE_LOCATION,
     CONF_AMAP_API_KEY,
     CONF_AMAP_DAILY_LIMIT,
     CONF_ENABLE_AMAP,
-    DEFAULT_INTERVAL,
-    DEFAULT_USE_PAGE_LOCATION,
-    LOW_BATTERY_PERCENT,
+    DEFAULT_ACTIVITY_ENTITY,
+    DEFAULT_COMMUTE_ZONES,
+    DEFAULT_COMPANY_ZONES,
+    DEFAULT_OFFPEAK_ENABLED,
+    DEFAULT_OFFPEAK_INTERVAL,
+    DEFAULT_OFFPEAK_WINDOWS,
+    DEFAULT_PEAK_ENABLED,
+    DEFAULT_PEAK_INTERVAL,
+    DEFAULT_PEAK_WINDOWS,
+    DEFAULT_PERIOD_WEEKDAYS,
+    HOME_EXIT_BUFFER_M,
+    HOME_UPDATE_INTERVAL_MAX,
+    HOME_UPDATE_INTERVAL_MIN,
+    LOW_BATTERY_THRESHOLD,
     DEFAULT_AMAP_DAILY_LIMIT,
+    in_windows,
+    opt_windows_text,
+    parse_windows,
+    resolve_max_interval_minutes,
 )
 
 _LOGGER = logging.getLogger(__name__)
-
 
 def _amap_text(value: Any) -> str | None:
     if value is None:
@@ -52,13 +80,8 @@ def _amap_grid(lng: float, lat: float) -> tuple[int, int]:
 class SyncCoordinator(DataUpdateCoordinator):
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
-        interval = entry.options.get(CONF_INTERVAL, entry.data.get(CONF_INTERVAL, DEFAULT_INTERVAL))
-        try:
-            interval = int(interval)
-        except (TypeError, ValueError):
-            interval = DEFAULT_INTERVAL
-        if interval < 60:
-            interval = interval * 60
+        interval_min = resolve_max_interval_minutes(entry.options or {}, entry.data)
+        interval = interval_min * 60
 
         try:
             super().__init__(
@@ -80,6 +103,8 @@ class SyncCoordinator(DataUpdateCoordinator):
         self.hass = hass
         self._session_key = entry.data[CONF_SESSION_KEY]
         self._need_reauth_notified = False
+        self._reauth_initiated = False
+        self._connectivity_down_logged = False
         self._credentials_sent = False
         self._refresh_lock = asyncio.Lock()
 
@@ -90,6 +115,19 @@ class SyncCoordinator(DataUpdateCoordinator):
         self._current_interval = interval
         self._auth_retry_count = 0
         self._auth_retry_unsub = None
+        self._locate_followup_task: asyncio.Task | None = None
+        self._locate_followup_deadline = 0.0
+        self._home_locate_mode = False
+        self._home_interval: int | None = None
+        self._max_interval = interval_min
+        self._peak_enabled = DEFAULT_PEAK_ENABLED
+        self._peak_windows: list[tuple[int, int]] = []
+        self._peak_interval = DEFAULT_PEAK_INTERVAL
+        self._offpeak_enabled = DEFAULT_OFFPEAK_ENABLED
+        self._offpeak_windows: list[tuple[int, int]] = []
+        self._offpeak_interval = DEFAULT_OFFPEAK_INTERVAL
+        self._period_weekdays = DEFAULT_PERIOD_WEEKDAYS
+        self._load_period_options()
 
         self._last_known_devices: dict[str, dict[str, Any]] = {}
         self._last_known_timestamps: dict[str, float] = {}
@@ -279,10 +317,18 @@ class SyncCoordinator(DataUpdateCoordinator):
                 if dev.get("latitude") is not None and dev.get("longitude") is not None:
                     new_ts = self._as_ts(dev.get("ts"))
                     old_ts = self._as_ts(merged.get("ts"))
-                    if new_ts is not None and (old_ts is None or new_ts > old_ts):
+                    coords_changed = (
+                        merged.get("latitude") != dev.get("latitude")
+                        or merged.get("longitude") != dev.get("longitude")
+                    )
+                    if (
+                        (new_ts is not None and (old_ts is None or new_ts > old_ts))
+                        or coords_changed
+                    ):
                         merged["latitude"] = dev.get("latitude")
                         merged["longitude"] = dev.get("longitude")
-                        merged["ts"] = dev.get("ts")
+                        if new_ts is not None:
+                            merged["ts"] = dev.get("ts")
                         if dev.get("address"):
                             merged["address"] = dev.get("address")
                         if dev.get("address_time"):
@@ -314,39 +360,214 @@ class SyncCoordinator(DataUpdateCoordinator):
 
         return merged
 
-    def _should_use_low_battery_interval(self, devices: list[dict[str, Any]]) -> bool:
+    def _opt(self, key: str, default: Any) -> Any:
+        return self.entry.options.get(key, self.entry.data.get(key, default))
+
+    def _load_period_options(self) -> None:
+        self._max_interval = resolve_max_interval_minutes(
+            self.entry.options or {}, self.entry.data
+        )
+        self._peak_enabled = bool(self._opt(CONF_PEAK_ENABLED, DEFAULT_PEAK_ENABLED))
+        self._offpeak_enabled = bool(
+            self._opt(CONF_OFFPEAK_ENABLED, DEFAULT_OFFPEAK_ENABLED)
+        )
+        self._peak_windows = (
+            parse_windows(
+                opt_windows_text(
+                    self._opt(CONF_PEAK_WINDOWS, DEFAULT_PEAK_WINDOWS),
+                    DEFAULT_PEAK_WINDOWS,
+                )
+            )
+            or []
+        )
+        self._offpeak_windows = (
+            parse_windows(
+                opt_windows_text(
+                    self._opt(CONF_OFFPEAK_WINDOWS, DEFAULT_OFFPEAK_WINDOWS),
+                    DEFAULT_OFFPEAK_WINDOWS,
+                )
+            )
+            or []
+        )
+        try:
+            self._peak_interval = int(self._opt(CONF_PEAK_INTERVAL, DEFAULT_PEAK_INTERVAL))
+        except (TypeError, ValueError):
+            self._peak_interval = DEFAULT_PEAK_INTERVAL
+        try:
+            self._offpeak_interval = int(
+                self._opt(CONF_OFFPEAK_INTERVAL, DEFAULT_OFFPEAK_INTERVAL)
+            )
+        except (TypeError, ValueError):
+            self._offpeak_interval = DEFAULT_OFFPEAK_INTERVAL
+        self._period_weekdays = bool(
+            self._opt(CONF_PERIOD_WEEKDAYS, DEFAULT_PERIOD_WEEKDAYS)
+        )
+
+    def _coords_in_home(
+        self,
+        lat: float,
+        lon: float,
+        zones: list[tuple[str, str, float, float, float]],
+        expanded: bool,
+    ) -> bool:
+        from .commute import _haversine_m
+
+        extra = HOME_EXIT_BUFFER_M if expanded else 0
+        for zone in zones:
+            if _haversine_m(lat, lon, zone[2], zone[3]) <= zone[4] + extra:
+                return True
+        return False
+
+    def _stay_zones(self) -> list[tuple[str, str, float, float, float]]:
+        from .commute import _home_zones, _id_list
+
+        home = _home_zones(
+            self.hass,
+            _id_list(self._opt(CONF_COMMUTE_ZONES, DEFAULT_COMMUTE_ZONES)),
+        )
+        company = _home_zones(
+            self.hass,
+            _id_list(self._opt(CONF_COMPANY_ZONES, DEFAULT_COMPANY_ZONES)),
+        )
+        return home + company
+
+    def _all_devices_home(self, devices: list[dict[str, Any]]) -> bool:
+        zones = self._stay_zones()
+        if not zones or not devices:
+            return False
+        expanded = self._home_locate_mode
+        for device in devices:
+            try:
+                lat = float(device["latitude"])
+                lon = float(device["longitude"])
+            except (KeyError, TypeError, ValueError):
+                return False
+            if not self._coords_in_home(lat, lon, zones, expanded):
+                return False
+        return True
+
+    def _device_at_home_or_company(self, device: dict[str, Any]) -> bool:
+        from .commute import _activity_mode, _id_list
+        from .device_tracker import _get_stable_device_id
+
+        entity_ids = [
+            entity_id
+            for entity_id in _id_list(
+                self._opt(CONF_ACTIVITY_ENTITY, DEFAULT_ACTIVITY_ENTITY)
+            )
+            if self.hass.states.get(entity_id) is not None
+        ]
+        device_id = _get_stable_device_id(device) or ""
+        name = str(device.get("deviceAliasName") or device.get("name") or "")
+        model = str(device.get("model") or "")
+        if _activity_mode(self.hass, device_id, name, model, entity_ids) == COMMUTE_MODE_BICYCLING:
+            return True
+        try:
+            lat = float(device["latitude"])
+            lon = float(device["longitude"])
+        except (KeyError, TypeError, ValueError):
+            return False
+        zones = self._stay_zones()
+        if not zones:
+            return False
+        return self._coords_in_home(lat, lon, zones, expanded=False)
+
+    def _weekday_periods(self, weekday: int) -> bool:
+        return not self._period_weekdays or weekday < 5
+
+    def _period_interval(self, devices: list[dict[str, Any]]) -> int:
+        if self._all_devices_home(devices):
+            if not self._home_locate_mode or self._home_interval is None:
+                self._home_interval = random.randint(
+                    HOME_UPDATE_INTERVAL_MIN, HOME_UPDATE_INTERVAL_MAX
+                )
+            self._home_locate_mode = True
+            return self._home_interval
+        self._home_locate_mode = False
+        self._home_interval = None
+        now = dt_now()
+        now_min = now.hour * 60 + now.minute
+        if not self._weekday_periods(now.weekday()):
+            return self._max_interval
+        if self._peak_enabled and in_windows(now_min, self._peak_windows):
+            return self._peak_interval
+        if self._offpeak_enabled and in_windows(now_min, self._offpeak_windows):
+            return self._offpeak_interval
+        return self._max_interval
+
+    def _apply_low_battery_slowdown(
+        self, interval: int, devices: list[dict[str, Any]]
+    ) -> int:
+        if self._home_locate_mode:
+            return interval
         for device in devices:
             battery = device.get("battery")
             if battery is None:
                 continue
             try:
-                if int(battery) <= LOW_BATTERY_PERCENT:
-                    return True
+                if int(battery) >= LOW_BATTERY_THRESHOLD:
+                    continue
             except (ValueError, TypeError):
-                pass
-        return False
-
-    def _normal_interval(self) -> int:
-        raw = self.entry.options.get(
-            CONF_INTERVAL,
-            self.entry.data.get(CONF_INTERVAL, DEFAULT_INTERVAL),
-        )
-        try:
-            value = int(raw)
-        except (TypeError, ValueError):
-            return DEFAULT_INTERVAL
-        if value < 60:
-            value *= 60
-        return value
+                continue
+            if self._device_at_home_or_company(device):
+                continue
+            return 60
+        return interval
 
     def _update_interval_dynamically(self, devices: list[dict[str, Any]]) -> None:
-        normal_interval = self._normal_interval()
-        target = normal_interval * 2 if self._should_use_low_battery_interval(devices) else normal_interval
-
+        self._load_period_options()
+        target_min = self._apply_low_battery_slowdown(
+            self._period_interval(devices), devices
+        )
+        target = max(60, int(target_min) * 60)
         if target != self._current_interval:
             self._current_interval = target
             self.update_interval = timedelta(seconds=target)
-            _LOGGER.info(f"[Coordinator] 轮询间隔调整为 {target}s")
+            _LOGGER.info(f"[Coordinator] 轮询间隔调整为 {target_min} 分钟")
+
+    def _mark_backend_unavailable(self, message: str) -> None:
+        if not self._connectivity_down_logged:
+            _LOGGER.error("[Sync] 后端不可用: %s", message)
+            self._connectivity_down_logged = True
+
+    def _mark_backend_available(self) -> None:
+        if self._connectivity_down_logged:
+            _LOGGER.info("[Sync] 后端连接已恢复")
+            self._connectivity_down_logged = False
+
+    def _reauth_flow_in_progress(self) -> bool:
+        entry_id = self.entry.entry_id
+        for flow in self.hass.config_entries.flow.async_progress():
+            context = flow.get("context") or {}
+            if (
+                context.get("source") == SOURCE_REAUTH
+                and context.get("entry_id") == entry_id
+            ):
+                return True
+        return False
+
+    def _maybe_start_reauth(
+        self, reason: str, need_reauth: bool, *, auth_required: bool = False
+    ) -> None:
+        if self._reauth_initiated or self._reauth_flow_in_progress():
+            return
+        if not should_offer_reauth(
+            reason, need_reauth, auth_required=auth_required
+        ):
+            return
+        self._reauth_initiated = True
+        _LOGGER.warning(
+            "[Sync] 需要重新认证 | reason=%s need_reauth=%s", reason, need_reauth
+        )
+
+        async def _start(_now=None) -> None:
+            try:
+                await self.hass.config_entries.async_start_reauth(self.entry)
+            except Exception as err:
+                _LOGGER.error("[Sync] 启动重新认证流程失败: %s", err)
+                self._reauth_initiated = False
+
+        self.hass.async_create_task(_start())
 
     def _cancel_auth_retry(self) -> None:
         if self._auth_retry_unsub:
@@ -369,9 +590,109 @@ class SyncCoordinator(DataUpdateCoordinator):
             f"[Sync] 认证暂态，{15}s 后重试 ({self._auth_retry_count}/8)"
         )
 
-    @staticmethod
-    def _has_fresh_device(devices: list[dict[str, Any]]) -> bool:
-        return any(d.get("is_fresh") for d in devices)
+    def _cancel_locate_followup(self) -> None:
+        task = self._locate_followup_task
+        self._locate_followup_task = None
+        self._locate_followup_deadline = 0.0
+        if task and not task.done():
+            task.cancel()
+
+    def _snapshot_device_ts(self) -> dict[str, dict[str, Any]]:
+        return {
+            did: {
+                "ts": self._as_ts(dev.get("ts")),
+                "lat": dev.get("latitude"),
+                "lng": dev.get("longitude"),
+            }
+            for did, dev in self._last_known_devices.items()
+        }
+
+    def _has_fresh_device(self, devices: list[dict[str, Any]]) -> bool:
+        return any(flag_true(d.get("is_fresh")) for d in devices)
+
+    def _devices_improved(
+        self, devices: list[dict[str, Any]], baseline: dict[str, dict[str, Any]]
+    ) -> bool:
+        from .device_tracker import _get_stable_device_id
+
+        for device in devices:
+            did = _get_stable_device_id(device)
+            if not did:
+                continue
+            if flag_true(device.get("is_fresh")):
+                return True
+            prev = baseline.get(did) or {}
+            new_ts = self._as_ts(device.get("ts"))
+            old_ts = prev.get("ts")
+            if new_ts is not None and (old_ts is None or new_ts > old_ts):
+                return True
+            if device.get("latitude") is None or device.get("longitude") is None:
+                continue
+            if prev.get("lat") != device.get("latitude") or prev.get("lng") != device.get(
+                "longitude"
+            ):
+                return True
+        return False
+
+    def _schedule_locate_followup(self) -> None:
+        self._cancel_locate_followup()
+        deadline = time.time() + max(60, self._current_interval)
+        baseline = self._snapshot_device_ts()
+        self._locate_followup_deadline = deadline
+        self._locate_followup_task = self.hass.async_create_task(
+            self._locate_followup_loop(deadline, baseline)
+        )
+        _LOGGER.info(
+            f"[Sync] 主动定位未拿到新坐标，将在下次间隔前持续跟进 "
+            f"(截止 {int(deadline - time.time())}s)"
+        )
+
+    async def _locate_followup_loop(
+        self, deadline: float, baseline: dict[str, dict[str, Any]]
+    ) -> None:
+        try:
+            tick = 0
+            while time.time() < deadline:
+                await asyncio.sleep(15)
+                if time.time() >= deadline:
+                    break
+                if self._refresh_lock.locked():
+                    continue
+                tick += 1
+                # 每约 60s 再试一次主动定位，其余时间读缓存看结果是否已回来
+                use_force = tick % 4 == 0
+                try:
+                    async with self._refresh_lock:
+                        try:
+                            raw = await self._call_sync(force_locate=use_force)
+                        except UpdateFailed as err:
+                            if not use_force:
+                                raise
+                            _LOGGER.warning(f"[Sync] 跟进主动定位失败，改读缓存: {err}")
+                            raw = await self._call_sync(force_locate=False)
+                        result = await self._process_sync_result(raw)
+                        devices = result.get("devices", [])
+                        if result.get("auth_pending") or raw.get("code") != 0:
+                            continue
+                        if not self._devices_improved(devices, baseline):
+                            continue
+                        if self._has_fresh_device(devices):
+                            self.bump_locate_count()
+                        self._last_locate_time = time.time()
+                        self._update_interval_dynamically(devices)
+                        self.async_set_updated_data(result)
+                        _LOGGER.info(
+                            f"[Sync] 跟进拿到新坐标，已更新实体 (force={use_force})"
+                        )
+                        return
+                except UpdateFailed as err:
+                    _LOGGER.debug(f"[Sync] 跟进同步失败: {err}")
+            _LOGGER.info("[Sync] 跟进截止仍无新坐标，继续使用缓存")
+        except asyncio.CancelledError:
+            return
+        finally:
+            if self._locate_followup_task is asyncio.current_task():
+                self._locate_followup_task = None
 
     async def async_request_active_locate(self, force: bool = False) -> dict[str, Any]:
         async with self._refresh_lock:
@@ -383,18 +704,39 @@ class SyncCoordinator(DataUpdateCoordinator):
                     return self.data
                 raise UpdateFailed(f"限频保护：请等待 {wait_time} 秒后重试")
 
-            raw = await self._call_sync(force_locate=True)
-            result = await self._process_sync_result(raw)
-            devices = result.get("devices", [])
-            if raw.get("code") == 0 and self._has_fresh_device(devices):
-                self.bump_locate_count()
+            self._cancel_locate_followup()
+            baseline = self._snapshot_device_ts()
+            try:
+                raw = await self._call_sync(force_locate=True)
+                result = await self._process_sync_result(raw)
+            except UpdateFailed as err:
+                _LOGGER.warning(f"[ActiveLocate] 主动定位失败，回退被动同步: {err}")
                 self._last_locate_time = time.time()
+                try:
+                    raw = await self._call_sync(force_locate=False)
+                    result = await self._process_sync_result(raw)
+                except UpdateFailed as err2:
+                    if self.data:
+                        _LOGGER.warning(f"[ActiveLocate] 被动同步也失败，保留上次数据: {err2}")
+                        return self.data
+                    raise
+            devices = result.get("devices", [])
+            got_fresh = False
+            if raw.get("code") == 0 and not result.get("auth_pending"):
+                self._last_locate_time = time.time()
+                if self._devices_improved(devices, baseline):
+                    got_fresh = True
+                    if self._has_fresh_device(devices):
+                        self.bump_locate_count()
             if result.get("auth_pending"):
                 self._schedule_auth_retry()
             else:
                 self._auth_retry_count = 0
                 self._cancel_auth_retry()
+            self._update_interval_dynamically(devices)
             self.async_set_updated_data(result)
+            if not got_fresh and not result.get("auth_pending"):
+                self._schedule_locate_followup()
             return result
 
     async def _async_update_data(self) -> dict[str, Any]:
@@ -410,34 +752,47 @@ class SyncCoordinator(DataUpdateCoordinator):
                 await self._send_credentials()
                 self._credentials_sent = True
 
-            use_page_location = self.entry.options.get(
-                CONF_USE_PAGE_LOCATION,
-                self.entry.data.get(CONF_USE_PAGE_LOCATION, DEFAULT_USE_PAGE_LOCATION),
-            )
-            force_locate = False
+            now = time.time()
             prev_pending = bool(self.data and self.data.get("auth_pending"))
+            force_locate = prev_pending or (now - self._last_locate_time) >= self._min_locate_interval
+            if force_locate:
+                self._cancel_locate_followup()
 
-            if use_page_location:
-                now = time.time()
-                if prev_pending or (now - self._last_locate_time) >= self._min_locate_interval:
-                    force_locate = True
-
-            raw_result = await self._call_sync(force_locate=force_locate)
-            result = await self._process_sync_result(raw_result)
+            baseline = self._snapshot_device_ts()
+            try:
+                raw_result = await self._call_sync(force_locate=force_locate)
+                result = await self._process_sync_result(raw_result)
+            except UpdateFailed as err:
+                if force_locate:
+                    _LOGGER.warning(f"[Sync] 主动定位失败，回退被动同步: {err}")
+                    self._last_locate_time = time.time()
+                    try:
+                        raw_result = await self._call_sync(force_locate=False)
+                        result = await self._process_sync_result(raw_result)
+                    except UpdateFailed as err2:
+                        if self.data:
+                            _LOGGER.warning(f"[Sync] 被动同步也失败，保留上次数据: {err2}")
+                            self._schedule_locate_followup()
+                            return self.data
+                        raise
+                elif self.data:
+                    _LOGGER.warning(f"[Sync] 更新失败，保留上次数据: {err}")
+                    return self.data
+                else:
+                    raise
             if raw_result.get("auth_pending") and not result.get("auth_pending"):
                 result = dict(result)
                 result["auth_pending"] = True
                 result["auth_reason"] = raw_result.get("auth_reason") or raw_result.get("reason")
             devices = result.get("devices", [])
 
-            if (
-                force_locate
-                and raw_result.get("code") == 0
-                and self._has_fresh_device(devices)
-                and not result.get("auth_pending")
-            ):
-                self.bump_locate_count()
+            got_fresh = False
+            if force_locate and raw_result.get("code") == 0 and not result.get("auth_pending"):
                 self._last_locate_time = time.time()
+                if self._devices_improved(devices, baseline):
+                    got_fresh = True
+                    if self._has_fresh_device(devices):
+                        self.bump_locate_count()
 
             if result.get("auth_pending"):
                 self._schedule_auth_retry()
@@ -448,18 +803,20 @@ class SyncCoordinator(DataUpdateCoordinator):
             elapsed = int((time.time() - start_time) * 1000)
             active = result.get("active", False)
 
-            if devices:
-                self._update_interval_dynamically(devices)
+            self._update_interval_dynamically(devices)
 
-            if len(devices) != self._last_device_count or elapsed > 1000 or result.get("auth_pending"):
-                fresh_count = sum(1 for d in devices if d.get("is_fresh", True))
-                _LOGGER.info(
-                    f"[Sync] 设备={len(devices)} | active={active} | "
-                    f"force_locate={force_locate} | "
-                    f"auth_pending={bool(result.get('auth_pending'))} | "
-                    f"is_fresh={fresh_count}/{len(devices)} | {elapsed}ms"
-                )
-                self._last_device_count = len(devices)
+            if force_locate and not got_fresh and not result.get("auth_pending"):
+                self._schedule_locate_followup()
+
+            fresh_count = sum(1 for d in devices if flag_true(d.get("is_fresh")))
+            _LOGGER.info(
+                f"[Sync] 设备={len(devices)} | active={active} | "
+                f"force_locate={force_locate} | got_fresh={got_fresh} | "
+                f"auth_pending={bool(result.get('auth_pending'))} | "
+                f"is_fresh={fresh_count}/{len(devices)} | "
+                f"interval={self._current_interval}s | {elapsed}ms"
+            )
+            self._last_device_count = len(devices)
 
             return result
 
@@ -492,6 +849,12 @@ class SyncCoordinator(DataUpdateCoordinator):
                 )
                 self._need_reauth_notified = True
 
+            self._maybe_start_reauth(
+                reason,
+                bool(result.get("need_reauth")),
+                auth_required=code == 990,
+            )
+
             if self._last_known_devices:
                 preserved = dict(self.data) if self.data else {}
                 preserved["code"] = 0
@@ -516,7 +879,10 @@ class SyncCoordinator(DataUpdateCoordinator):
             return result
 
         if code == 0:
+            self._mark_backend_available()
             self._need_reauth_notified = False
+            if not result.get("auth_pending"):
+                self._reauth_initiated = False
             devices = result.get("devices", [])
 
             if devices:
@@ -696,14 +1062,18 @@ class SyncCoordinator(DataUpdateCoordinator):
                 if resp.status != 200:
                     text = await resp.text()
                     _LOGGER.warning(f"[Sync] HTTP {resp.status}: {text[:100]}")
+                    self._mark_backend_unavailable(f"HTTP {resp.status}")
                     raise UpdateFailed(f"HTTP {resp.status}")
+                self._mark_backend_available()
                 return await resp.json()
 
         except asyncio.TimeoutError as err:
-            _LOGGER.debug(f"[Sync] 超时 (force_locate={force_locate})")
+            self._mark_backend_unavailable("请求超时")
+            _LOGGER.warning(f"[Sync] 超时 (force_locate={force_locate})")
             raise UpdateFailed("请求超时") from err
         except aiohttp.ClientError as err:
-            _LOGGER.debug(f"[Sync] 网络错误: {err}")
+            self._mark_backend_unavailable(str(err))
+            _LOGGER.warning(f"[Sync] 网络错误: {err}")
             raise UpdateFailed(f"网络错误: {err}") from err
 
 

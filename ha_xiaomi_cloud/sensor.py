@@ -21,12 +21,15 @@ from homeassistant.util.dt import as_local
 
 from .account import XiaomiAccount, XiaomiDevice, apply_suggested_entity_id
 from .const import DOMAIN, INTEGRATION_HUB_SUFFIX
+from .entity import XiaomiAccountEntity
+
+PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    account: XiaomiAccount = hass.data[DOMAIN][entry.unique_id]
+    account: XiaomiAccount = entry.runtime_data
     tracked: set[str] = set()
     hub_id = f"{entry.unique_id or account.username}{INTEGRATION_HUB_SUFFIX}"
 
@@ -39,7 +42,7 @@ async def async_setup_entry(
     )
     async_add_entities(
         [
-            XiaomiHubCreatedAtSensor(entry, hub_id),
+            XiaomiHubCreatedAtSensor(account, hub_id),
             XiaomiHubLocateCountSensor(account, hub_id),
             XiaomiHubAmapCountSensor(account, hub_id),
         ]
@@ -72,13 +75,16 @@ def add_entities(
         async_add_entities(new_tracked, True)
 
 
-class XiaomiHubCreatedAtSensor(SensorEntity):
+class XiaomiHubCreatedAtSensor(XiaomiAccountEntity, SensorEntity):
     _attr_has_entity_name = True
     _attr_should_poll = False
     _attr_translation_key = "created_at"
     _attr_icon = "mdi:calendar-clock"
 
-    def __init__(self, entry: ConfigEntry, hub_id: str) -> None:
+    def __init__(self, account: XiaomiAccount, hub_id: str) -> None:
+        self._account = account
+        self._unsub_dispatcher: CALLBACK_TYPE | None = None
+        entry = account._entry
         created = getattr(entry, "created_at", None)
         if created is None:
             created = datetime.now().astimezone()
@@ -89,6 +95,11 @@ class XiaomiHubCreatedAtSensor(SensorEntity):
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
+        self._unsub_dispatcher = async_dispatcher_connect(
+            self.hass,
+            self._account.signal_device_update,
+            self._handle_availability_update,
+        )
         self.hass.loop.call_soon(
             apply_suggested_entity_id,
             self.hass,
@@ -96,8 +107,18 @@ class XiaomiHubCreatedAtSensor(SensorEntity):
             self._attr_suggested_object_id,
         )
 
+    @callback
+    def _handle_availability_update(self) -> None:
+        self.async_write_ha_state()
 
-class _XiaomiHubUsageSensor(RestoreSensor, SensorEntity):
+    async def async_will_remove_from_hass(self) -> None:
+        if self._unsub_dispatcher:
+            self._unsub_dispatcher()
+            self._unsub_dispatcher = None
+        await super().async_will_remove_from_hass()
+
+
+class _XiaomiHubUsageSensor(XiaomiAccountEntity, RestoreSensor, SensorEntity):
     _attr_has_entity_name = True
     _attr_should_poll = False
     _attr_state_class = SensorStateClass.TOTAL
@@ -177,9 +198,10 @@ class XiaomiHubAmapCountSensor(_XiaomiHubUsageSensor):
         self._account.restore_usage(amap=value, day=day)
 
 
-class _XiaomiDeviceSensor(SensorEntity):
+class _XiaomiDeviceSensor(XiaomiAccountEntity, SensorEntity):
     _attr_should_poll = False
     _attr_has_entity_name = True
+    _attr_force_update = True
 
     def __init__(
         self,
@@ -274,7 +296,7 @@ class XiaomiDevicePhoneStatusSensor(_XiaomiDeviceSensor):
         return self._device.phone_status
 
 
-class XiaomiDeviceUpdateTimeSensor(_XiaomiDeviceSensor):
+class XiaomiDeviceUpdateTimeSensor(RestoreSensor, _XiaomiDeviceSensor):
     _attr_icon = "mdi:clock-outline"
 
     def __init__(self, account, device, tracked, track_key) -> None:
@@ -287,6 +309,24 @@ class XiaomiDeviceUpdateTimeSensor(_XiaomiDeviceSensor):
     @property
     def native_value(self) -> str | None:
         return self._device.location_update_time
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        attrs: dict[str, Any] = {}
+        if self._device.last_poll_time:
+            attrs["last_poll"] = self._device.last_poll_time
+        return attrs
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        last = await self.async_get_last_state()
+        if last is not None and last.state not in (None, "", "unknown", "unavailable"):
+            if not self._device.location_update_time:
+                self._device._data["device_location_update_time"] = last.state
+        if last is not None and not self._device.last_poll_time:
+            poll = last.attributes.get("last_poll")
+            if poll:
+                self._device._data["last_poll_time"] = poll
 
 
 class XiaomiDeviceAddressSensor(RestoreSensor, _XiaomiDeviceSensor):
